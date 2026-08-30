@@ -9,12 +9,13 @@ const { auth } = require('../middleware/auth');
 const { registerSchema, loginSchema } = require('../validators/schemas');
 const config = require('../config');
 
-// Brute-force protection on credential endpoints
+// Brute-force protection on credential endpoints (disabled in tests)
 const authLimiter = rateLimit({
   windowMs: config.RATE_LIMIT_WINDOW_MS,
   limit: config.AUTH_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => config.NODE_ENV === 'test',
   message: { message: 'Too many attempts. Please try again later.' },
 });
 

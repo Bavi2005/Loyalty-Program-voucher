@@ -15,6 +15,7 @@ const authLimiter = rateLimit({
   limit: config.AUTH_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => config.NODE_ENV === 'test',
   message: { message: 'Too many attempts. Please try again later.' },
 });
 

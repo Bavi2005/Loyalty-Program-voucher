@@ -4,7 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 const DIST = path.join(__dirname, 'frontend', 'dist');
-const BACKEND = 'http://localhost:5000';
+// Overridable for Docker: the compose network resolves the backend by service name
+const BACKEND = process.env.BACKEND_TARGET || 'http://localhost:5000';
 
 const proxy = httpProxy.createProxyServer({});
 

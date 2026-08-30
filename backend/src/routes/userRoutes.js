@@ -15,6 +15,7 @@ const uploadLimiter = rateLimit({
   limit: 30,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => config.NODE_ENV === 'test',
   message: { message: 'Too many uploads. Please try again later.' },
 });
 

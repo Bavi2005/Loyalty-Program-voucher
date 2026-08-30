@@ -2,6 +2,8 @@
 
 A full-stack loyalty program for the Junior Developer Take-Home Assessment. Users register, upload purchase receipts, and — once an admin approves a receipt — automatically earn a voucher.
 
+[![CI](https://github.com/Bavi2005/Loyalty-Program-voucher/actions/workflows/ci.yml/badge.svg)](https://github.com/Bavi2005/Loyalty-Program-voucher/actions/workflows/ci.yml)
+
 ## Stack
 
 - **Frontend**: React 18 + Vite, Tailwind CSS v4, React Hook Form + Zod
@@ -130,7 +132,34 @@ Open the forwarded **port 8080** in your browser. No separate dev servers requir
 ## Project layout
 
 ```
-backend/      Express API, Prisma schema, seed
+backend/      Express API, Prisma schema, seed, tests
 frontend/     React SPA (built to frontend/dist)
 proxy.js      Static file server + /api,/uploads reverse proxy (port 8080)
 ```
+
+## Testing
+
+```bash
+cd backend
+# unit (validation)
+npm run test:unit
+# integration + concurrency (requires a test DB — CI uses a Postgres service)
+DATABASE_URL="postgresql://loyalty_user:loyalty_pass@localhost:5432/loyalty_test?schema=public" \
+  npm test
+```
+
+Suite covers: auth (valid/invalid/dup/unknown/401), receipt upload (type, size, dup order, invalid amount), admin-only actions (403 for users), **idempotent approval under 3× concurrent requests** (exactly one voucher), reject→no-voucher, voucher redeem (second redeem fails).
+
+## Docker
+
+```bash
+docker compose up --build
+```
+
+Brings up PostgreSQL + backend (migrations + seed on start) + the single-port app on **http://localhost:8080**.
+
+## CI/CD
+
+- `.github/workflows/ci.yml` — installs, migrates a throwaway Postgres, runs the full test suite, builds the frontend.
+- `.github/workflows/security.yml` — `npm audit` (high+) for backend & frontend, weekly.
+- `.github/dependabot.yml` — weekly dependency PRs.

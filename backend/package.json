@@ -4,10 +4,12 @@
   "description": "",
   "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "test:unit": "jest tests/unit.test.js",
+    "test:integration": "jest tests/api.integration.test.js"
   },
   "keywords": [],
   "author": "",

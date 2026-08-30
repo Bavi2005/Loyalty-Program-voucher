@@ -11,6 +11,7 @@ const path = require('path');
 
 const app = express();
 const PORT = config.PORT;
+app.set('trust proxy', 1); // correct client IPs behind proxy.js / reverse proxies
 
 // Middleware
 app.use(helmet());
@@ -58,22 +59,17 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// Error handling middleware
+// Central error handling: Zod → 400, Prisma/multer mapped, unknown → 500
+const errorHandler = require('./middleware/errorHandler');
 app.use((err, req, res, next) => {
-  logger.error('unhandled_error', { message: err.message, code: err.code });
-
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ message: 'File size exceeds limit (5MB)' });
-  }
-  if (err.message === 'Invalid file type') {
-    return res.status(400).json({ message: 'Invalid file type. Only JPEG, PNG, and PDF allowed.' });
-  }
-
-  res.status(err.status || 500).json({ message: err.status ? err.message : 'Something went wrong!' });
+  logger.error('request_error', { message: err.message, code: err.code, path: req.path });
+  errorHandler(err, req, res, next);
 });
 
-app.listen(PORT, () => {
-  logger.info('server_started', { port: PORT, env: config.NODE_ENV });
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    logger.info('server_started', { port: PORT, env: config.NODE_ENV });
+  });
+}
 
 module.exports = app;

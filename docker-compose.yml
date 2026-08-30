@@ -1,0 +1,50 @@
+name: loyalty-program
+
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      BACKEND_TARGET: http://backend:5000
+    depends_on:
+      backend:
+        condition: service_started
+    networks: [app]
+
+  backend:
+    build: ./backend
+    container_name: loyalty-backend
+    environment:
+      DATABASE_URL: postgresql://loyalty:loyalty@db:5432/loyalty?schema=public
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-please-override-this-32chars}
+      NODE_ENV: production
+      PORT: 5000
+      CLIENT_URL: http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "5000"
+    networks: [app]
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: loyalty
+      POSTGRES_PASSWORD: loyalty
+      POSTGRES_DB: loyalty
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loyalty -d loyalty"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [app]
+
+networks:
+  app:
+
+volumes:
+  pgdata:
