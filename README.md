@@ -32,6 +32,69 @@ A full-stack loyalty program for the Junior Developer Take-Home Assessment. User
 5. Already-processed receipt → no second voucher (re-approve is a no-op).
 6. Backend is the single source of truth for all of the above.
 
+## Architecture
+
+```
+React SPA (built to dist/)
+        │  (browser talks to ONE port)
+        ▼
+proxy.js — static files + reverse proxy for /api and /uploads  →  port 8080
+        ▼
+Express API (port 5000)  →  Prisma ORM  →  PostgreSQL
+```
+
+Layering inside the backend: `routes → middleware (auth, validate, rate-limit) → controllers → Prisma → PostgreSQL`.
+Zod validates every request body before a controller ever runs; JWT middleware enforces authentication, and `role` claims enforce admin-only routes.
+
+## Key design decisions
+
+- **Exactly-one-voucher invariant**: approval is a single Prisma `$transaction` that re-reads receipt status inside the transaction, updates the receipt to `APPROVED`, and creates the voucher. Re-approving reads `APPROVED` and returns the existing voucher instead of creating another — idempotent even under concurrent requests. `Voucher.receiptId` also has a `UNIQUE` constraint as a database-level backstop.
+- **Fail-fast config**: `backend/src/config` validates all environment variables at boot (zod) and refuses to start on invalid configuration.
+- **Structured logging**: JSON logs (`src/logging/logger.js`) instead of scattered `console.log`. Passwords/tokens are never logged.
+- **Security posture**: helmet headers, zod input validation, bcrypt(12) password hashing, rate limiting on login/register and receipt upload, duplicate-order detection, file type/size validation, and role checks on every admin route.
+- **Health probes**: `GET /health` (liveness) and `GET /ready` (checks the DB connection).
+
+## API overview
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/register` | Register (email/phone + password) |
+| POST | `/api/auth/login` | Login → JWT |
+| GET | `/api/auth/me` | Current user |
+| GET | `/api/user/dashboard` | Pending/approved receipts, available vouchers, total spent |
+| GET | `/api/user/receipts` | Own receipts (with linked voucher) |
+| POST | `/api/user/receipts` | Upload receipt (multipart: image/pdf + orderId + purchaseDate + amount) |
+| GET | `/api/user/vouchers` | Own vouchers |
+| POST | `/api/user/vouchers/:id/redeem` | Redeem a voucher |
+| PUT | `/api/user/profile` | Update profile / change password |
+| POST | `/api/admin/login` | Admin login |
+| GET | `/api/admin/dashboard` | Global stats |
+| GET | `/api/admin/receipts` | List receipts — pagination, status filter, search |
+| POST | `/api/admin/receipts/:id/approve` | Approve → creates exactly one voucher (transactional, idempotent) |
+| POST | `/api/admin/receipts/:id/reject` | Reject (no voucher) |
+| GET | `/health`, `/ready` | Liveness / readiness |
+
+Errors are JSON (`{ message }` + HTTP status): 400 validation, 401 unauthenticated, 403 forbidden, 404 not found, 409 duplicates / already processed.
+
+## Environment variables
+
+`backend/.env` (copy from `backend/.env.example`):
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Token signing secret (≥ 16 chars enforced) |
+| `JWT_EXPIRES_IN` | Token lifetime (default `12h`) |
+| `PORT` | API port (default 5000) |
+| `CLIENT_URL` | Frontend origin |
+| `MAX_FILE_SIZE` | Upload byte limit (default 5 MB) |
+| `UPLOAD_DIR` | Where receipt files are stored |
+| `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_MAX` | Rate limiting |
+
+## AI usage note
+
+AI-assisted tooling was used to accelerate scaffolding, UI iteration, and hardening; all code was reviewed, tested end-to-end, and is understood by the developer (see commit history).
+
 ## Prerequisites
 
 - Node.js 18+

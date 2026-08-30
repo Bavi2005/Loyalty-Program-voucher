@@ -15,7 +15,13 @@ exports.getDashboard = async (req, res, next) => {
     ] = await Promise.all([
       prisma.receipt.count({ where: { userId, status: 'PENDING' } }),
       prisma.receipt.count({ where: { userId, status: 'APPROVED' } }),
-      prisma.voucher.count({ where: { userId } }),
+      prisma.voucher.count({
+        where: {
+          userId,
+          redeemedAt: null,
+          OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
+        },
+      }),
       prisma.receipt.aggregate({
         where: { userId, status: 'APPROVED' },
         _sum: { amount: true }
