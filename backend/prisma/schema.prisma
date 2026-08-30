@@ -1,0 +1,70 @@
+// Prisma schema for Loyalty Program
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ReceiptStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  phone        String?       @unique
+  passwordHash String
+  name         String?
+  role         Role          @default(USER)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  receipts     Receipt[]
+  vouchers     Voucher[]
+
+  @@index([email])
+  @@index([phone])
+}
+
+model Receipt {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId      String
+  purchaseDate DateTime
+  amount       Float
+  imageUrl     String
+  status       ReceiptStatus @default(PENDING)
+  submittedAt  DateTime      @default(now())
+  reviewedAt   DateTime?
+  voucher      Voucher?
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderId])
+}
+
+model Voucher {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receiptId  String    @unique
+  receipt    Receipt   @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  code       String    @unique    @default(cuid())
+  issuedAt   DateTime  @default(now())
+  expiresAt  DateTime?
+  redeemedAt DateTime?
+
+  @@index([userId])
+  @@index([receiptId])
+}
