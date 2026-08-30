@@ -3,10 +3,11 @@ import { createContext, useContext, useEffect, useState } from 'react';
 const ThemeContext = createContext(null);
 
 function getInitial() {
-  if (typeof localStorage !== 'undefined' && localStorage.theme) {
+  if (typeof localStorage !== 'undefined' && localStorage.theme !== undefined) {
     return localStorage.theme === 'dark';
   }
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  // Default to light (bright, airy SaaS look). Toggle still available.
+  return false;
 }
 
 export function ThemeProvider({ children }) {

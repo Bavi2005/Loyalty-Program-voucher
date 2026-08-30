@@ -12,7 +12,10 @@ import {
   Cell,
   Tooltip,
 } from 'recharts';
-import { SkeletonLoader } from '../components/ui';
+import { SkeletonLoader, Badge } from '../components/ui';
+import { format } from 'date-fns';
+
+const REWARD_TARGET = 500;
 
 const statCards = [
   { label: 'Pending Receipts', key: 'pendingReceipts', icon: '📋', gradient: 'from-amber-500 to-orange-500', accent: 'text-amber-600', dark: 'dark:text-amber-400' },
@@ -25,11 +28,12 @@ const COLORS = ['#f59e0b', '#10b981', '#8b5cf6'];
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { stats, loading, error, refreshStats } = useUser();
+  const { stats, loading, error, receipts, fetchReceipts, refreshStats } = useUser();
 
   useEffect(() => {
     refreshStats();
-  }, [refreshStats]);
+    fetchReceipts?.();
+  }, [refreshStats, fetchReceipts]);
 
   if (loading) {
     return (
@@ -90,11 +94,11 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 px-8 py-10 text-white shadow-2xl shadow-indigo-600/25 sm:px-12 sm:py-12"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-700 px-8 py-10 text-white shadow-xl shadow-indigo-600/20 sm:px-12 sm:py-12"
       >
-        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-fuchsia-400/30 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-indigo-300/25 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.07)_1px,transparent_0)] bg-[size:22px_22px]" />
+        <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-60 w-60 rounded-full bg-fuchsia-300/15 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[size:24px_24px]" />
 
         <div className="relative flex flex-wrap items-center justify-between gap-8">
           <div className="min-w-0">
@@ -141,16 +145,18 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.06 }}
             whileHover={{ y: -4 }}
-            className="card card-hover rounded-2xl p-7"
+            className="card card-hover flex min-h-[168px] flex-col justify-between rounded-2xl p-7"
           >
-            <div className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${card.gradient} text-2xl shadow-lg`}>
+            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${card.gradient} text-xl shadow-lg`}>
               {card.icon}
             </div>
-            <p className="text-[13px] font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">{card.label}</p>
-            <p className={`mt-2 text-4xl font-extrabold tracking-tight ${card.accent} ${card.dark}`}>
-              {card.prefix || ''}
-              {stats?.[card.key] || 0}
-            </p>
+            <div>
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">{card.label}</p>
+              <p className={`mt-1 text-4xl font-extrabold tabular-nums tracking-tight ${card.accent} ${card.dark}`}>
+                {card.prefix || ''}
+                {stats?.[card.key] || 0}
+              </p>
+            </div>
           </motion.div>
         ))}
       </div>
@@ -170,18 +176,21 @@ export default function Dashboard() {
                 className="group flex items-center gap-5 rounded-2xl border border-gray-100 bg-white px-6 py-5 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50/40 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-indigo-500/40 dark:hover:bg-slate-800"
               >
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 text-xl dark:from-indigo-500/10 dark:to-violet-500/10">{a.icon}</span>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900 dark:text-white">{a.title}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 dark:text-white">{a.title}</p>
                   <p className="text-sm text-gray-500 dark:text-slate-400">{a.sub}</p>
                 </div>
-                <span className="text-gray-400 transition-transform group-hover:translate-x-1 dark:text-slate-500">→</span>
+                <svg className="h-5 w-5 shrink-0 text-gray-300 transition-all group-hover:translate-x-1 group-hover:text-indigo-500 dark:text-slate-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
               </Link>
             ))}
           </div>
         </div>
 
-        <div className="card rounded-2xl p-7">
-          <h2 className="mb-3 text-xl font-bold text-gray-900 dark:text-white">Activity</h2>
+        <div className="flex flex-col gap-6">
+          <div className="card rounded-2xl p-7">
+            <h2 className="mb-3 text-xl font-bold text-gray-900 dark:text-white">Activity</h2>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -202,8 +211,89 @@ export default function Dashboard() {
               </span>
             ))}
           </div>
+          </div>
+
+          {/* Next reward progress */}
+          <div className="card rounded-2xl p-7">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Next reward</h2>
+            {(() => {
+              const spent = Number(stats?.totalSpent || 0);
+              const pct = Math.min(100, Math.round((spent / REWARD_TARGET) * 100));
+              const left = Math.max(0, REWARD_TARGET - spent);
+              return (
+                <div className="mt-4">
+                  <div className="flex items-end justify-between">
+                    <p className="text-3xl font-extrabold tabular-nums tracking-tight text-indigo-600 dark:text-indigo-400">
+                      {pct}%
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
+                      {left > 0 ? `$${left.toFixed(0)} to go` : 'Reward ready!'}
+                    </p>
+                  </div>
+                  <div className="mt-3 h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-slate-700/60">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.9, ease: 'easeOut', delay: 0.2 }}
+                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                    />
+                  </div>
+                  <p className="mt-3 text-sm text-gray-500 dark:text-slate-400">
+                    Spend ${REWARD_TARGET} to unlock a voucher — you're at ${spent.toFixed(2)}.
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </div>
+
+      {/* Recent receipts */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+        className="card rounded-2xl p-7"
+      >
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent receipts</h2>
+          <Link
+            to="/receipt-history"
+            className="text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+          >
+            View all
+          </Link>
+        </div>
+        {(receipts || []).length === 0 ? (
+          <p className="rounded-xl bg-gray-50 px-5 py-8 text-center text-sm text-gray-500 dark:bg-slate-800/60 dark:text-slate-400">
+            No receipts yet — <Link to="/upload-receipt" className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400">upload your first one</Link>.
+          </p>
+        ) : (
+          <ul className="divide-y divide-gray-100 dark:divide-slate-700/60">
+            {(receipts || []).slice(0, 5).map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-4 py-3.5">
+                <div className="flex min-w-0 items-center gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 text-lg dark:from-indigo-500/10 dark:to-violet-500/10">
+                    🧾
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-gray-900 dark:text-white">{r.orderId}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      {format(new Date(r.purchaseDate), 'MMM d, yyyy')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <p className="font-semibold tabular-nums text-gray-900 dark:text-white">
+                    ${Number(r.amount).toFixed(2)}
+                  </p>
+                  <Badge status={r.status}>{r.status}</Badge>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </motion.div>
     </div>
   );
 }
