@@ -23,6 +23,7 @@ export default function AdminReceipts() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,6 +47,7 @@ export default function AdminReceipts() {
 
   const act = async (id, action) => {
     setBusyId(id);
+    setActionError('');
     try {
       await axios.post(`/api/admin/receipts/${id}/${action}`);
       success(`Receipt ${action === 'approve' ? 'approved — voucher issued' : 'rejected'}`);
@@ -54,7 +56,18 @@ export default function AdminReceipts() {
       }
       await load();
     } catch (err) {
-      toastError(err.response?.data?.message || `Failed to ${action} receipt`);
+      const status = err.response?.status;
+      const serverMsg = err.response?.data?.message;
+      let friendly;
+      if (status === 404 || !status) {
+        friendly = `Cannot reach the API. This page is hosted on GitHub Pages (static), so there's no live backend here. Run the app locally (node proxy.js) or deploy a backend and set VITE_API_URL.`;
+      } else if (status === 403) {
+        friendly = 'Admin access denied — please log in again at /admin/login.';
+      } else {
+        friendly = serverMsg || `Failed to ${action} receipt.`;
+      }
+      setActionError(friendly);
+      toastError(`Failed to ${action}`, friendly);
     } finally {
       setBusyId(null);
     }
@@ -76,6 +89,13 @@ export default function AdminReceipts() {
           </button>
         }
       />
+
+      {actionError && (
+        <div role="alert" className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError('')} aria-label="Dismiss" className="text-rose-500 hover:text-rose-700">✕</button>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">

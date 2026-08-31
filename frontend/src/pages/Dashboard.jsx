@@ -38,12 +38,13 @@ export default function Dashboard() {
 
   if (loading && !stats) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-7 lg:space-y-10">
         <SkeletonLoader width="50%" height="36px" />
-        <SkeletonLoader height="180px" className="rounded-2xl" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <SkeletonLoader height="200px" className="rounded-2xl" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
           {[0, 1, 2, 3].map((i) => <SkeletonLoader key={i} height="110px" className="rounded-2xl" />)}
         </div>
+        <SkeletonLoader height="220px" className="rounded-2xl" />
       </div>
     );
   }
@@ -73,26 +74,26 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7 lg:space-y-10">
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
           {greeting()}, {user?.name?.split(' ')[0] || 'there'}
         </h1>
-        <p className="mt-1.5 text-[15px] text-gray-500 dark:text-slate-400">
+        <p className="mt-2 text-[15px] text-gray-500 dark:text-slate-400">
           {remaining > 0
             ? <>You're <span className="font-semibold text-indigo-600 dark:text-indigo-400">{formatCurrency(remaining)}</span> away from your next reward.</>
             : 'Your next reward is ready 🎉'}
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-6 lg:gap-8 lg:grid-cols-5">
         {/* Membership card */}
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-indigo-800 to-[#0F172A] p-6 text-white shadow-xl shadow-indigo-900/20 sm:p-8 lg:col-span-3 ring-1 ${tier.ring}`}
+          className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-indigo-800 to-[#0F172A] p-6 text-white shadow-xl shadow-indigo-900/20 sm:p-8 lg:p-10 lg:col-span-3 ring-1 ${tier.ring}`}
         >
           <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-amber-300/10 blur-3xl" />
@@ -138,16 +139,16 @@ export default function Dashboard() {
         </motion.section>
 
         {/* Quick stats */}
-        <div className="grid grid-cols-2 gap-4 lg:col-span-2 lg:grid-cols-1 xl:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4 lg:col-span-2">
           {quickStats.map((s, i) => (
             <motion.div
               key={s.label}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: 0.08 + i * 0.05 }}
-              className="card rounded-2xl p-5"
+              className="card rounded-2xl p-5 sm:p-6"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
                 <s.icon className="h-5 w-5" />
               </div>
               <p className="mt-3 text-2xl font-extrabold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
