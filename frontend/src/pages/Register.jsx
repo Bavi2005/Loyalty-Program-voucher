@@ -116,6 +116,9 @@ export default function Register() {
             {...register('confirmPassword')}
           />
         </div>
+        <p className="text-xs leading-relaxed text-gray-400 dark:text-slate-500">
+          Use at least 6 characters. A mix of letters and numbers works best.
+        </p>
         <Button type="submit" loading={loading} loadingText="Creating account…">
           Create account
         </Button>

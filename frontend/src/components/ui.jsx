@@ -1,6 +1,6 @@
 // frontend/src/components/ui.jsx
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /* ---------------- Animation presets ---------------- */
@@ -81,46 +81,56 @@ export function ToastProvider({ children }) {
   }, []);
 
   const toast = useCallback(
-    (type, message) => {
+    (type, title, description) => {
       const id = Math.random().toString(36).slice(2);
-      setToasts((t) => [...t, { id, type, message }]);
-      setTimeout(() => dismiss(id), 4000);
+      setToasts((t) => [...t, { id, type, title, description }]);
+      setTimeout(() => dismiss(id), 5000);
     },
     [dismiss]
   );
 
   const value = {
     toast,
-    success: (m) => toast('success', m),
-    error: (m) => toast('error', m),
-    info: (m) => toast('info', m),
+    success: (title, description) => toast('success', title, description),
+    error: (title, description) => toast('error', title, description),
+    info: (title, description) => toast('info', title, description),
   };
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`pointer-events-auto flex items-start gap-3 rounded-xl px-4 py-3 shadow-lg ring-1 transition ${
-              t.type === 'success'
-                ? 'bg-emerald-600 text-white ring-emerald-700'
-                : t.type === 'error'
-                ? 'bg-rose-600 text-white ring-rose-700'
-                : 'bg-gray-900 text-white ring-gray-800'
-            }`}
-          >
-            <span className="text-lg leading-none">{t.type === 'success' ? '✓' : t.type === 'error' ? '✕' : 'ℹ'}</span>
-            <p className="text-sm font-medium">{t.message}</p>
-            <button
-              onClick={() => dismiss(t.id)}
-              className="ml-auto text-white/70 hover:text-white"
+      <div role="region" aria-label="Notifications" aria-live="polite"
+        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2 px-4 sm:px-0">
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, y: 12, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 80 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className={`pointer-events-auto flex items-start gap-3 rounded-xl px-4 py-3.5 shadow-lg ring-1 ${
+                t.type === 'success'
+                  ? 'bg-emerald-600 text-white ring-emerald-700'
+                  : t.type === 'error'
+                  ? 'bg-rose-600 text-white ring-rose-700'
+                  : 'bg-gray-900 text-white ring-gray-800'
+              }`}
+              role="status"
             >
-              ✕
-            </button>
-          </div>
-        ))}
+              <span className="text-lg leading-none mt-0.5" aria-hidden="true">
+                {t.type === 'success' ? '✓' : t.type === 'error' ? '✕' : 'ℹ'}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-tight">{t.title}</p>
+                {t.description && <p className="mt-0.5 text-[13px] text-white/80">{t.description}</p>}
+              </div>
+              <button onClick={() => dismiss(t.id)} className="ml-auto shrink-0 text-white/70 hover:text-white" aria-label="Dismiss">
+                ✕
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );
@@ -130,6 +140,86 @@ export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) return { success() {}, error() {}, info() {} };
   return ctx;
+}
+
+/* ---------------- Modal (accessible) ---------------- */
+export function Modal({ open, onClose, title, children, className = '' }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const prev = document.activeElement;
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    ref.current?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+      prev?.focus?.();
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-end justify-center p-4 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label={typeof title === 'string' ? title : undefined}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+    >
+      <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" aria-hidden="true" />
+      <div ref={ref} tabIndex={-1} className={`card relative w-full max-w-md rounded-2xl p-6 ${className}`}>
+        {title && (
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <h2 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">{title}</h2>
+            <button type="button" onClick={onClose} aria-label="Close dialog"
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-slate-700">
+              ✕
+            </button>
+          </div>
+        )}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Progress bar ---------------- */
+export function ProgressBar({ value = 0, className = '', tone = 'brand' }) {
+  const pct = Math.max(0, Math.min(100, value));
+  const gradients = {
+    brand: 'from-indigo-500 to-violet-500',
+    gold: 'from-amber-400 to-orange-500',
+    success: 'from-emerald-400 to-teal-500',
+  };
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(pct)}
+      className={`h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-slate-700/60 ${className}`}
+    >
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+        className={`h-full rounded-full bg-gradient-to-r ${gradients[tone] || gradients.brand}`}
+      />
+    </div>
+  );
+}
+
+/* ---------------- Avatar ---------------- */
+export function Avatar({ name = '', className = '' }) {
+  return (
+    <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white ring-2 ring-indigo-100 dark:ring-slate-700 ${className}`}>
+      {(name || 'U').charAt(0).toUpperCase()}
+    </div>
+  );
 }
 
 /* ---------------- Skeleton Loader ---------------- */

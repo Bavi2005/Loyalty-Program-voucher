@@ -1,73 +1,48 @@
 // frontend/src/pages/Dashboard.jsx
 
-import { useAuth } from '../contexts/AuthContext';
-import { useUser } from '../contexts/UserContext';
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from 'recharts';
-import { SkeletonLoader, Badge } from '../components/ui';
-import { format } from 'date-fns';
+import { Gift, ReceiptText, Clock, Wallet, ArrowRight, ChevronRight, UploadCloud } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useUser } from '../contexts/UserContext';
+import { SkeletonLoader, Badge, ProgressBar } from '../components/ui';
+import { Logo } from '../components/Navbar';
+import { formatCurrency, formatDateTime, timeAgoExpiry } from '../utils/formatters';
 
 const REWARD_TARGET = 500;
 
-const statCards = [
-  { label: 'Pending Receipts', key: 'pendingReceipts', icon: '📋', gradient: 'from-amber-500 to-orange-500', accent: 'text-amber-600', dark: 'dark:text-amber-400' },
-  { label: 'Approved Receipts', key: 'approvedReceipts', icon: '✅', gradient: 'from-emerald-500 to-green-500', accent: 'text-emerald-600', dark: 'dark:text-emerald-400' },
-  { label: 'Available Vouchers', key: 'availableVouchers', icon: '🎁', gradient: 'from-violet-500 to-purple-500', accent: 'text-violet-600', dark: 'dark:text-violet-400' },
-  { label: 'Total Spent', key: 'totalSpent', icon: '💰', gradient: 'from-indigo-500 to-blue-500', accent: 'text-indigo-600', dark: 'dark:text-indigo-400', prefix: '$' },
-];
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
-const COLORS = ['#f59e0b', '#10b981', '#8b5cf6'];
+function memberTier(spent) {
+  if (spent >= 2000) return { name: 'Platinum', ring: 'ring-cyan-200/30', text: 'from-sky-400/90 to-cyan-200/90' };
+  if (spent >= 500) return { name: 'Gold', ring: 'ring-amber-300/30', text: 'from-amber-300 to-yellow-200' };
+  if (spent >= 100) return { name: 'Silver', ring: 'ring-slate-300/30', text: 'from-slate-200 to-gray-100' };
+  return { name: 'Bronze', ring: 'ring-orange-300/30', text: 'from-orange-300 to-amber-200' };
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { stats, loading, error, receipts, fetchReceipts, refreshStats } = useUser();
+  const { stats, receipts, vouchers, loading, error, refreshStats, fetchReceipts, fetchVouchers } = useUser();
 
   useEffect(() => {
     refreshStats();
-    fetchReceipts?.();
-  }, [refreshStats, fetchReceipts]);
+    fetchReceipts();
+    fetchVouchers();
+  }, [refreshStats, fetchReceipts, fetchVouchers]);
 
-  if (loading) {
+  if (loading && !stats) {
     return (
-      <div className="space-y-10">
-        <div>
-          <h2 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">Dashboard</h2>
-          <p className="mt-2 text-[15px] text-gray-500 dark:text-slate-400">Loading your loyalty overview…</p>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {[1,2,3,4].map((_, i) => (
-            <SkeletonLoader
-              key={i}
-              width="100%"
-              height="80px"
-              count={3}
-              className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800"
-            />
-          ))}
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-3">
-          <SkeletonLoader
-            width="100%"
-            height="120px"
-            count={2}
-            className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 lg:col-span-2"
-          />
-          <SkeletonLoader
-            width="100%"
-            height="120px"
-            count={1}
-            className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800"
-          />
+      <div className="space-y-6">
+        <SkeletonLoader width="50%" height="36px" />
+        <SkeletonLoader height="180px" className="rounded-2xl" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => <SkeletonLoader key={i} height="110px" className="rounded-2xl" />)}
         </div>
       </div>
     );
@@ -75,225 +50,188 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-center text-rose-500">Error loading dashboard: {error}</p>
+      <div className="card mx-auto max-w-md rounded-2xl p-8 text-center">
+        <p className="text-sm font-medium text-rose-600">{error}</p>
+        <button onClick={refreshStats} className="mt-4 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white">Try again</button>
       </div>
     );
   }
 
-  const pieData = [
-    { name: 'Pending', value: stats?.pendingReceipts || 0 },
-    { name: 'Approved', value: stats?.approvedReceipts || 0 },
-    { name: 'Vouchers', value: stats?.availableVouchers || 0 },
+  const spent = Number(stats?.totalSpent || 0);
+  const pct = Math.min(100, Math.round((spent / REWARD_TARGET) * 100));
+  const remaining = Math.max(0, REWARD_TARGET - spent);
+  const tier = memberTier(spent);
+  const pending = stats?.pendingReceipts || 0;
+  const available = (vouchers || []).filter((v) => !v.redeemedAt && (!v.expiresAt || new Date(v.expiresAt) > new Date())).length;
+  const recent = (receipts || []).slice(0, 5);
+
+  const quickStats = [
+    { label: 'Available rewards', value: available, icon: Gift },
+    { label: 'Being reviewed', value: pending, icon: Clock },
+    { label: 'Rewarded purchases', value: stats?.approvedReceipts || 0, icon: ReceiptText },
+    { label: 'Lifetime rewarded spend', value: formatCurrency(spent), icon: Wallet },
   ];
 
   return (
-    <div className="space-y-10">
-      {/* Hero banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-700 px-8 py-10 text-white shadow-xl shadow-indigo-600/20 sm:px-12 sm:py-12"
-      >
-        <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-60 w-60 rounded-full bg-fuchsia-300/15 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[size:24px_24px]" />
+    <div className="space-y-8">
+      {/* Greeting */}
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
+          {greeting()}, {user?.name?.split(' ')[0] || 'there'}
+        </h1>
+        <p className="mt-1.5 text-[15px] text-gray-500 dark:text-slate-400">
+          {remaining > 0
+            ? <>You're <span className="font-semibold text-indigo-600 dark:text-indigo-400">{formatCurrency(remaining)}</span> away from your next reward.</>
+            : 'Your next reward is ready 🎉'}
+        </p>
+      </div>
 
-        <div className="relative flex flex-wrap items-center justify-between gap-8">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-100/80">Member dashboard</p>
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Welcome back, {user?.name || 'there'} 👋
-            </h1>
-            <p className="mt-3 max-w-md text-[15px] leading-relaxed text-indigo-100/90">
-              Every receipt moves you closer to your next reward. Upload it and we&apos;ll handle the rest.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link
-                to="/upload-receipt"
-                className="rounded-xl bg-white px-6 py-3 text-sm font-bold text-indigo-700 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
-              >
-                Upload receipt
-              </Link>
-              <Link
-                to="/vouchers"
-                className="rounded-xl bg-white/15 px-6 py-3 text-sm font-bold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-white/25"
-              >
-                My vouchers
-              </Link>
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Membership card */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-indigo-800 to-[#0F172A] p-6 text-white shadow-xl shadow-indigo-900/20 sm:p-8 lg:col-span-3 ring-1 ${tier.ring}`}
+        >
+          <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-amber-300/10 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:24px_24px]" />
+
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Logo className="h-8 w-8" />
+              <span className="text-sm font-semibold tracking-wide text-white/90">LoyaltyPro</span>
             </div>
+            <span className={`bg-gradient-to-r bg-clip-text text-sm font-extrabold uppercase tracking-widest text-transparent ${tier.text}`}>
+              {tier.name} member
+            </span>
           </div>
 
-          <div className="hidden rounded-2xl bg-white/15 px-7 py-6 ring-1 ring-white/25 backdrop-blur-md lg:block">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-100/80">Total spent</p>
-            <p className="mt-1 text-4xl font-extrabold tracking-tight text-white">
-              ${Number(stats?.totalSpent || 0).toFixed(2)}
-            </p>
-            <p className="mt-1 text-xs font-medium text-indigo-100/80">
-              {stats?.availableVouchers || 0} voucher{stats?.availableVouchers === 1 ? '' : 's'} available
-            </p>
+          <div className="relative mt-8">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-200/80">Reward balance</p>
+            <p className="mt-1 text-4xl font-extrabold tracking-tight sm:text-5xl">{formatCurrency(spent)}</p>
+            <p className="mt-1 text-sm font-medium text-indigo-200/80">qualifying spend</p>
           </div>
-        </div>
-      </motion.div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((card, i) => (
-          <motion.div
-            key={card.key}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.06 }}
-            whileHover={{ y: -4 }}
-            className="card card-hover flex min-h-[168px] flex-col justify-between rounded-2xl p-7"
-          >
-            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${card.gradient} text-xl shadow-lg`}>
-              {card.icon}
-            </div>
-            <div>
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">{card.label}</p>
-              <p className={`mt-1 text-4xl font-extrabold tabular-nums tracking-tight ${card.accent} ${card.dark}`}>
-                {card.prefix || ''}
-                {stats?.[card.key] || 0}
+          <div className="relative mt-6">
+            <div className="flex items-end justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200/80">Next reward</p>
+              <p className="text-sm font-bold tabular-nums">
+                {formatCurrency(spent)} <span className="text-indigo-200/60">/ {formatCurrency(REWARD_TARGET)}</span>
               </p>
             </div>
-          </motion.div>
-        ))}
-      </div>
+            <div className="mt-2.5">
+              <ProgressBar value={pct} tone="gold" className="!h-2 !bg-white/15" />
+            </div>
+            <p className="mt-2 text-xs font-medium text-indigo-100/90">
+              {remaining > 0 ? `${formatCurrency(remaining)} to go — upload your next receipt.` : 'You did it — a new voucher is ready.'}
+            </p>
+            <Link
+              to="/upload-receipt"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-indigo-700 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+            >
+              <UploadCloud className="h-4 w-4" />
+              Upload receipt
+            </Link>
+          </div>
+        </motion.section>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="card rounded-2xl p-7 lg:col-span-2">
-          <h2 className="mb-5 text-xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
-          <div className="grid gap-4">
-            {[
-              { to: '/receipt-history', title: 'View Receipt History', sub: 'See all your submitted receipts', icon: '🧾' },
-              { to: '/vouchers', title: 'My Vouchers', sub: 'View and use your vouchers', icon: '🎟️' },
-              { to: '/settings', title: 'Account Settings', sub: 'Update your profile information', icon: '⚙️' },
-            ].map((a) => (
-              <Link
-                key={a.to}
-                to={a.to}
-                className="group flex items-center gap-5 rounded-2xl border border-gray-100 bg-white px-6 py-5 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50/40 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-indigo-500/40 dark:hover:bg-slate-800"
-              >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 text-xl dark:from-indigo-500/10 dark:to-violet-500/10">{a.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 dark:text-white">{a.title}</p>
-                  <p className="text-sm text-gray-500 dark:text-slate-400">{a.sub}</p>
-                </div>
-                <svg className="h-5 w-5 shrink-0 text-gray-300 transition-all group-hover:translate-x-1 group-hover:text-indigo-500 dark:text-slate-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-6">
-          <div className="card rounded-2xl p-7">
-            <h2 className="mb-3 text-xl font-bold text-gray-900 dark:text-white">Activity</h2>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={75} paddingAngle={4}>
-                  {pieData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-4 flex justify-center gap-5 text-xs font-medium text-gray-500 dark:text-slate-400">
-            {pieData.map((d, i) => (
-              <span key={d.name} className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[i] }} />
-                {d.name}
-              </span>
-            ))}
-          </div>
-          </div>
-
-          {/* Next reward progress */}
-          <div className="card rounded-2xl p-7">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Next reward</h2>
-            {(() => {
-              const spent = Number(stats?.totalSpent || 0);
-              const pct = Math.min(100, Math.round((spent / REWARD_TARGET) * 100));
-              const left = Math.max(0, REWARD_TARGET - spent);
-              return (
-                <div className="mt-4">
-                  <div className="flex items-end justify-between">
-                    <p className="text-3xl font-extrabold tabular-nums tracking-tight text-indigo-600 dark:text-indigo-400">
-                      {pct}%
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-slate-400">
-                      {left > 0 ? `$${left.toFixed(0)} to go` : 'Reward ready!'}
-                    </p>
-                  </div>
-                  <div className="mt-3 h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-slate-700/60">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.9, ease: 'easeOut', delay: 0.2 }}
-                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
-                    />
-                  </div>
-                  <p className="mt-3 text-sm text-gray-500 dark:text-slate-400">
-                    Spend ${REWARD_TARGET} to unlock a voucher — you're at ${spent.toFixed(2)}.
-                  </p>
-                </div>
-              );
-            })()}
-          </div>
+        {/* Quick stats */}
+        <div className="grid grid-cols-2 gap-4 lg:col-span-2 lg:grid-cols-1 xl:grid-cols-2">
+          {quickStats.map((s, i) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.08 + i * 0.05 }}
+              className="card rounded-2xl p-5"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                <s.icon className="h-5 w-5" />
+              </div>
+              <p className="mt-3 text-2xl font-extrabold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+              <p className="text-[12px] font-medium text-gray-500 dark:text-slate-400">{s.label}</p>
+            </motion.div>
+          ))}
         </div>
       </div>
 
-      {/* Recent receipts */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
+      {/* Recent activity */}
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.3 }}
-        className="card rounded-2xl p-7"
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="card rounded-2xl p-6 sm:p-7"
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent receipts</h2>
-          <Link
-            to="/receipt-history"
-            className="text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
-          >
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent activity</h2>
+          <Link to="/receipt-history" className="group inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
             View all
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
-        {(receipts || []).length === 0 ? (
-          <p className="rounded-xl bg-gray-50 px-5 py-8 text-center text-sm text-gray-500 dark:bg-slate-800/60 dark:text-slate-400">
-            No receipts yet — <Link to="/upload-receipt" className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400">upload your first one</Link>.
-          </p>
+
+        {recent.length === 0 ? (
+          <div className="rounded-xl bg-gray-50 px-6 py-10 text-center dark:bg-slate-800/60">
+            <p className="text-sm font-medium text-gray-600 dark:text-slate-300">No activity yet</p>
+            <p className="mt-1 text-sm text-gray-400 dark:text-slate-500">
+              <Link to="/upload-receipt" className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400">Upload your first receipt</Link> to start earning.
+            </p>
+          </div>
         ) : (
           <ul className="divide-y divide-gray-100 dark:divide-slate-700/60">
-            {(receipts || []).slice(0, 5).map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-4 py-3.5">
-                <div className="flex min-w-0 items-center gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 text-lg dark:from-indigo-500/10 dark:to-violet-500/10">
-                    🧾
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-gray-900 dark:text-white">{r.orderId}</p>
-                    <p className="text-xs text-gray-500 dark:text-slate-400">
-                      {format(new Date(r.purchaseDate), 'MMM d, yyyy')}
-                    </p>
-                  </div>
+            {recent.map((r) => (
+              <li key={r.id} className="flex items-center gap-4 py-3.5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-500 dark:bg-slate-800/60 dark:text-slate-400">
+                  <ReceiptText className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-gray-900 dark:text-white">{r.orderId}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{formatDateTime(r.submittedAt)}</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <p className="font-semibold tabular-nums text-gray-900 dark:text-white">
-                    ${Number(r.amount).toFixed(2)}
-                  </p>
-                  <Badge status={r.status}>{r.status}</Badge>
+                <div className="text-right">
+                  <p className="font-semibold tabular-nums text-gray-900 dark:text-white">{formatCurrency(r.amount)}</p>
+                  <Badge status={r.status}>
+                    {r.status === 'PENDING' ? 'Under review' : r.status === 'APPROVED' ? 'Rewarded' : 'Rejected'}
+                  </Badge>
                 </div>
               </li>
             ))}
           </ul>
         )}
-      </motion.div>
+      </motion.section>
+
+      {/* Available vouchers teaser */}
+      {available > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="card flex flex-wrap items-center justify-between gap-4 rounded-2xl border-l-4 border-l-amber-400 p-6"
+        >
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 dark:bg-amber-500/10">
+              <Gift className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="font-bold text-gray-900 dark:text-white">
+                {available} reward{available === 1 ? '' : 's'} ready to use
+              </p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                {vouchers.filter((v) => !v.redeemedAt && v.expiresAt).slice(0, 1).map((v) => {
+                  const t = timeAgoExpiry(v.expiresAt);
+                  return t ? `Next expiry: ${t}` : '';
+                })}
+              </p>
+            </div>
+          </div>
+          <Link to="/vouchers" className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-500">
+            View rewards
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </motion.section>
+      )}
     </div>
   );
 }

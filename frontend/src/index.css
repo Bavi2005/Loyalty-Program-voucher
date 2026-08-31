@@ -44,7 +44,35 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Smooth interactions without animating the whole DOM (avoids first-paint flash & jank) */
+:root {
+  /* Semantic tokens */
+  --brand: #4F46E5;
+  --brand-600: #4F46E5;
+  --brand-500: #6366F1;
+  --reward: #F59E0B;
+  --reward-600: #D97706;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #F43F5E;
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-2: #F1F5F9;
+  --border: #E2E8F0;
+  --text: #0F172A;
+  --text-2: #64748B;
+  --radius-card: 16px;
+  --radius-lg: 20px;
+}
+.dark {
+  --bg: #020617;
+  --surface: #0F172A;
+  --surface-2: #1E293B;
+  --border: #1E293B;
+  --text: #F1F5F9;
+  --text-2: #94A3B8;
+}
+
+/* Smooth interactions without animating the whole DOM (avoids first-paint flash) */
 .interactive,
 a,
 button,
