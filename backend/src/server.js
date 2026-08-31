@@ -14,8 +14,20 @@ const PORT = config.PORT;
 app.set('trust proxy', 1); // correct client IPs behind proxy.js / reverse proxies
 
 // Middleware
+const allowedOrigins = (process.env.CORS_ORIGINS || config.CLIENT_URL)
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow non-browser clients (curl/same-origin) and configured origins
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(null, false);
+  },
+  credentials: true,
+}));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

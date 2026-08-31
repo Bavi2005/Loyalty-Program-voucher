@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import axios from 'axios';
+import { api as axios } from '../api';
 import { useToast, PageHeader, Field, btnSmPrimary } from '../components/ui';
 
 const SettingsSchema = z

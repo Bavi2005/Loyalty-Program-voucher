@@ -5,10 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { format } from 'date-fns';
 import { useToast, PageHeader, Badge, Spinner, EmptyState } from '../components/ui';
+import { uploadUrl } from '../api';
 
 function ReceiptRow({ receipt, expandedId, setExpandedId }) {
   const isExpanded = expandedId === receipt.id;
-  const imageSrc = receipt.imageUrl ? `/uploads/${receipt.imageUrl.split('/').pop()}` : null;
+  const imageSrc = uploadUrl(receipt.imageUrl);
   const isImage = imageSrc && /\.(jpe?g|png)$/i.test(imageSrc);
 
   return (

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api as axios } from '../api';
 import { useUser } from '../contexts/UserContext';
 import { useToast, PageHeader, btnGhost, btnSmPrimary, inputCls, labelCls } from '../components/ui';
 

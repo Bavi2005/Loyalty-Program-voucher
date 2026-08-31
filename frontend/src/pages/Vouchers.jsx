@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api as axios } from '../api';
 import confetti from 'canvas-confetti';
 import { useUser } from '../contexts/UserContext';
 import { format } from 'date-fns';

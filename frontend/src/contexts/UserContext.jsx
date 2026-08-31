@@ -1,7 +1,7 @@
 // frontend/src/contexts/UserContext.jsx
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { api as axios } from '../api';
 
 const UserContext = createContext();
 

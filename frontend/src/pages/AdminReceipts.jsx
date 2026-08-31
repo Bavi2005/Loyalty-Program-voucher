@@ -1,7 +1,7 @@
 // frontend/src/pages/AdminReceipts.jsx
 
 import { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import { api as axios, uploadUrl } from '../api';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useAdmin } from '../contexts/AdminContext';
@@ -60,7 +60,7 @@ export default function AdminReceipts() {
     }
   };
 
-  const imageSrc = (r) => (r.imageUrl ? `/uploads/${r.imageUrl.split('/').pop()}` : null);
+  const imageSrc = (r) => uploadUrl(r.imageUrl);
 
   return (
     <AdminLayout>
