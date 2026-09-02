@@ -33,6 +33,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/backend ./backend
 COPY --from=builder /app/frontend/dist ./frontend/dist
 COPY --from=builder /app/proxy.js ./proxy.js
+COPY --from=builder /app/start.js ./start.js
 COPY --from=builder /app/package.json ./package.json
 
 # Reinstall backend production dependencies
