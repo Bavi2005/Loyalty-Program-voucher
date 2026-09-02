@@ -1,54 +1,74 @@
 const { spawn } = require('child_process');
 
-let shuttingDown = false;
+console.log('Starting LoyaltyPro services...');
 
-function startProcess(name, args, extraEnv = {}) {
-  const child = spawn(process.execPath, args, {
+// Start backend internally on port 5000
+const backend = spawn(
+  process.execPath,
+  ['backend/src/server.js'],
+  {
     stdio: 'inherit',
     env: {
       ...process.env,
-      ...extraEnv,
+      PORT: '5000',
     },
-  });
-
-  child.on('exit', (code, signal) => {
-    console.error(
-      `${name} exited with code ${code ?? 'null'} signal ${signal ?? 'none'}`
-    );
-
-    if (!shuttingDown) {
-      shutdown(code || 1);
-    }
-  });
-
-  return child;
-}
-
-// Backend must use internal port 5000
-const backend = startProcess(
-  'backend',
-  ['backend/src/server.js'],
-  { PORT: '5000' }
+  }
 );
 
-// Public proxy uses Render's PORT (8080 in your setup)
-const proxy = startProcess(
-  'proxy',
-  ['proxy.js']
+// Start public frontend/proxy server.
+// This keeps Render's PORT=8080.
+const proxy = spawn(
+  process.execPath,
+  ['proxy.js'],
+  {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+    },
+  }
 );
 
-function shutdown(exitCode = 0) {
+let shuttingDown = false;
+
+function shutdown(code = 0) {
   if (shuttingDown) return;
 
   shuttingDown = true;
 
-  if (!backend.killed) backend.kill('SIGTERM');
-  if (!proxy.killed) proxy.kill('SIGTERM');
+  console.log('Shutting down LoyaltyPro services...');
+
+  if (!backend.killed) {
+    backend.kill('SIGTERM');
+  }
+
+  if (!proxy.killed) {
+    proxy.kill('SIGTERM');
+  }
 
   setTimeout(() => {
-    process.exit(exitCode);
+    process.exit(code);
   }, 500).unref();
 }
+
+backend.on('exit', (code, signal) => {
+  console.error(
+    `Backend exited. code=${code ?? 'null'} signal=${signal ?? 'none'}`
+  );
+
+  if (!shuttingDown) {
+    shutdown(code || 1);
+  }
+});
+
+proxy.on('exit', (code, signal) => {
+  console.error(
+    `Proxy exited. code=${code ?? 'null'} signal=${signal ?? 'none'}`
+  );
+
+  if (!shuttingDown) {
+    shutdown(code || 1);
+  }
+});
 
 process.on('SIGTERM', () => shutdown(0));
 process.on('SIGINT', () => shutdown(0));
