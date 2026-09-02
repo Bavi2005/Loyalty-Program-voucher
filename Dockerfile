@@ -47,4 +47,4 @@ USER app
 
 EXPOSE 8080
 
-CMD ["node", "proxy.js"]
+CMD ["node", "start.js"]
