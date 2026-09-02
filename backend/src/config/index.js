@@ -1,4 +1,3 @@
-// backend/src/config/index.js
 // Centralised, validated configuration. Fails fast on missing/invalid env.
 
 const { z } = require('zod');
@@ -8,7 +7,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(5000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
-  JWT_EXPIRES_IN: z.string().default('12h'),
+  JWT_EXPIRES_IN: z.string().default('7d'),
   CLIENT_URL: z.string().default('http://localhost:8080'),
   UPLOAD_DIR: z.string().default('uploads'),
   MAX_FILE_SIZE: z.coerce.number().int().positive().default(5 * 1024 * 1024),
@@ -25,7 +24,6 @@ function buildConfig(env = process.env) {
     const issues = parsed.error.issues
       .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
       .join('\n');
-    // eslint-disable-next-line no-console
     console.error(`Invalid environment configuration:\n${issues}`);
     process.exit(1);
   }
