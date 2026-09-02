@@ -1,26 +1,7 @@
-// frontend/src/components/ui.jsx
-
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-/* ---------------- Animation presets ---------------- */
-export const fadeUp = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, ease: 'easeOut' },
-};
-
-export const MotionDiv = motion.div;
 export { AnimatePresence };
-
-/* ---------------- Spinner ---------------- */
-export function Spinner({ className = 'h-12 w-12' }) {
-  return (
-    <div
-      className={`${className} animate-spin rounded-full border-4 border-indigo-600 border-t-transparent`}
-    />
-  );
-}
 
 /* ---------------- Status Badge ---------------- */
 const STATUS_STYLES = {
@@ -75,6 +56,7 @@ const ToastContext = createContext(null);
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const activeRef = useRef(new Set());
 
   const dismiss = useCallback((id) => {
     setToasts((t) => t.filter((x) => x.id !== id));
@@ -82,19 +64,30 @@ export function ToastProvider({ children }) {
 
   const toast = useCallback(
     (type, title, description) => {
+      const key = `${type}::${title}::${description}`;
+
+      // Skip duplicate active toasts so a looping effect only ever shows one.
+      if (activeRef.current.has(key)) return;
+
       const id = Math.random().toString(36).slice(2);
+      activeRef.current.add(key);
       setToasts((t) => [...t, { id, type, title, description }]);
-      setTimeout(() => dismiss(id), 5000);
+      setTimeout(() => {
+        activeRef.current.delete(key);
+        dismiss(id);
+      }, 5000);
     },
     [dismiss]
   );
 
-  const value = {
-    toast,
-    success: (title, description) => toast('success', title, description),
-    error: (title, description) => toast('error', title, description),
-    info: (title, description) => toast('info', title, description),
-  };
+  const success = useCallback((title, description) => toast('success', title, description), [toast]);
+  const error = useCallback((title, description) => toast('error', title, description), [toast]);
+  const info = useCallback((title, description) => toast('info', title, description), [toast]);
+
+  const value = useMemo(
+    () => ({ toast, success, error, info }),
+    [toast, success, error, info]
+  );
 
   return (
     <ToastContext.Provider value={value}>
@@ -284,56 +277,5 @@ export function Alert({ children }) {
       <span aria-hidden="true">⚠</span>
       <p>{children}</p>
     </div>
-  );
-}
-
-/* ---------------- Ripple Effect ---------------- */
-export function Ripple({ children, className = '' }) {
-  const [ripple, setRipple] = useState(null);
-
-  const handleClick = (e) => {
-    const btnRect = e.currentTarget.getBoundingClientRect();
-    const rippleSize = Math.max(btnRect.width, btnRect.height);
-    setRipple({
-      x: e.clientX - btnRect.left - rippleSize / 2,
-      y: e.clientY - btnRect.top - rippleSize / 2,
-      size: rippleSize,
-    });
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      className={className}
-      ref={(el) => {
-        // Cleanup if needed
-      }}
-    >
-      <span className="relative inline-flex items-center px-4 py-2">{children}</span>
-      {ripple && (
-        <span
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            left: ripple.x,
-            top: ripple.y,
-            width: ripple.size,
-            height: ripple.size,
-            background: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: '50%',
-            transform: 'translate(-50%, -50%) scale(0)',
-            animation: 'ripple 0.6s ease-out',
-          }}
-        >
-          <style jsx>{`
-            @keyframes ripple {
-              to {
-                transform: translate(-50%, -50%) scale(2);
-                opacity: 0;
-              }
-            }
-          `}</style>
-        </span>
-      )}
-    </button>
   );
 }
