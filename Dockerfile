@@ -1,13 +1,20 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
+
 # Install root (proxy) + backend + frontend dependencies
 COPY package*.json ./
 COPY backend/package*.json backend/
 COPY frontend/package*.json frontend/
+
 RUN npm ci --prefix backend && npm ci --prefix frontend && npm ci
 
-# Copy source and build frontend
+# Copy source
 COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate --schema=backend/prisma/schema.prisma
+
+# Build frontend
 RUN npm run build --prefix frontend
 
 # ---- Runtime image ----
