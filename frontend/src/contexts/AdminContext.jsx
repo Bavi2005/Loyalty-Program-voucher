@@ -9,7 +9,7 @@ const API_URL = '/api';
 
 export const AdminProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [receipts, setReceipts] = useState([]);
   const [adminLoading, setAdminLoading] = useState(false);

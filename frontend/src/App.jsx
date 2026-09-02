@@ -40,8 +40,8 @@ function App() {
                 <Route element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} path="/settings" />
                 
                 {/* Protected admin routes */}
-                <Route element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} path="/admin/dashboard" />
-                <Route element={<AdminProtectedRoute><AdminReceipts /></AdminProtectedRoute>} path="/admin/receipts" />
+                <Route element={<AdminProtectedRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminProtectedRoute>} path="/admin/dashboard" />
+                <Route element={<AdminProtectedRoute><AdminLayout><AdminReceipts /></AdminLayout></AdminProtectedRoute>} path="/admin/receipts" />
                 
                 {/* Redirects */}
                 <Route path="/" element={<Navigate to="/login" replace />} />

@@ -73,6 +73,10 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    if (user.role === 'ADMIN') {
+      return res.status(401).json({ message: 'Use /admin/login for admin access' });
+    }
+
     const isValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isValid) {

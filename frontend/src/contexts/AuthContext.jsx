@@ -10,7 +10,7 @@ const API_URL = '/api';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,7 +26,15 @@ export const AuthProvider = ({ children }) => {
       try {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         const response = await axios.get(`${API_URL}/auth/me`);
-        if (!cancelled) setUser(response.data);
+        const data = response.data;
+        if (data.role === 'ADMIN') {
+          // A user-token must never represent an admin. Clear the stale
+          // token so the user is prompted to sign in as a member again.
+          localStorage.removeItem('token');
+          delete axios.defaults.headers.common['Authorization'];
+        } else {
+          setUser(data);
+        }
       } catch (error) {
         localStorage.removeItem('token');
         delete axios.defaults.headers.common['Authorization'];
