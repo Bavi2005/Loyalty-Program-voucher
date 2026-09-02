@@ -17,7 +17,7 @@ function run(command, args, options = {}) {
 
 console.log('Initializing LoyaltyPro database...');
 
-// Create/update tables from schema.prisma
+// Create tables in Supabase
 run(
   process.execPath,
   [
@@ -28,14 +28,10 @@ run(
   ]
 );
 
-// Create/update demo admin + test user
-run(
-  process.execPath,
-  ['backend/seed.js']
-);
+// Seed admin + normal test user
+run(process.execPath, ['backend/seed.js']);
 
 console.log('\nDatabase initialization completed.');
 console.log('Starting LoyaltyPro...');
 
-// Start normal application
 require('./start.js');
