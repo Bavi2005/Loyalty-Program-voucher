@@ -2,6 +2,18 @@
 
 A full-stack loyalty program for the Junior Developer Take-Home Assessment. Users register, upload purchase receipts, and — once an admin approves a receipt — automatically earn a voucher.
 
+this repo is deployed by render and supabase you can check it out on  here
+
+user login
+https://loyalty-program-voucher.onrender.com/
+for user you can sign up and check it all out
+
+admin login:
+https://loyalty-program-voucher.onrender.com/admin/login
+for admin you can use these
+Email: admin@example.com
+Password: admin123
+
 [![CI](https://github.com/Bavi2005/Loyalty-Program-voucher/actions/workflows/ci.yml/badge.svg)](https://github.com/Bavi2005/Loyalty-Program-voucher/actions/workflows/ci.yml)
 
 ## Stack
