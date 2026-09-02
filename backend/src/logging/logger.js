@@ -1,4 +1,3 @@
-// backend/src/logging/logger.js
 // Minimal structured JSON logger. No secrets/tokens/passwords may ever be logged.
 
 const config = require('../config');
@@ -26,11 +25,4 @@ module.exports = {
   info: (msg, meta) => write('info', msg, meta),
   warn: (msg, meta) => write('warn', msg, meta),
   error: (msg, meta) => write('error', msg, meta),
-  /** Return a child logger bound to a request id. */
-  withRequestId: (requestId) => ({
-    debug: (msg, meta = {}) => write('debug', msg, { requestId, ...meta }),
-    info: (msg, meta = {}) => write('info', msg, { requestId, ...meta }),
-    warn: (msg, meta = {}) => write('warn', msg, { requestId, ...meta }),
-    error: (msg, meta = {}) => write('error', msg, { requestId, ...meta }),
-  }),
 };
