@@ -1,11 +1,9 @@
-// frontend/src/pages/AdminReceipts.jsx
-
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Check, X, ExternalLink, ReceiptText } from 'lucide-react';
 import { api as axios, uploadUrl } from '../api';
 import { useAdmin } from '../contexts/AdminContext';
-import { useToast, PageHeader, Badge, SkeletonLoader, EmptyState, btnSmPrimary } from '../components/ui';
+import { useToast, PageHeader, Badge, SkeletonLoader, EmptyState } from '../components/ui';
 import { formatCurrency, formatDate, formatDateTime } from '../utils/formatters';
 import confetti from 'canvas-confetti';
 

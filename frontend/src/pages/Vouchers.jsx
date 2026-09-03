@@ -1,10 +1,8 @@
-// frontend/src/pages/Vouchers.jsx
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Gift, AlertCircle, Wallet, Tag, Timer } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Wallet, Tag, Timer } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useToast, PageHeader, SkeletonLoader, EmptyState, Modal, Button, Badge, btnGhost, btnSmPrimary } from '../components/ui';
 import { formatCurrency, formatDate, timeAgoExpiry } from '../utils/formatters';
