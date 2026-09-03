@@ -18,9 +18,9 @@ Password: admin123
 
 ## Stack
 
-- **Frontend**: React 18 + Vite, Tailwind CSS v4, React Hook Form + Zod
+- **Frontend**: React 19 + Vite, Tailwind CSS v4, React Hook Form + Zod
 - **Backend**: Node.js + Express, Prisma ORM
-- **Database**: PostgreSQL (required by spec)
+- **Database**: PostgreSQL (Supabase in production)
 - **Auth**: JWT (access token), bcrypt password hashing
 
 ## Features
@@ -68,6 +68,14 @@ Zod validates every request body before a controller ever runs; JWT middleware e
 - **Security posture**: helmet headers, zod input validation, bcrypt(12) password hashing, rate limiting on login/register and receipt upload, duplicate-order detection, file type/size validation, and role checks on every admin route.
 - **Health probes**: `GET /health` (liveness) and `GET /ready` (checks the DB connection).
 
+## Known production considerations
+
+- Receipt `amount` is stored as a `Float`, which is fine for an assessment but
+  should become `Decimal` (or integer cents) for anything that handles real
+  money.
+- Receipt files are written to `backend/uploads`. Production should use object
+  storage (S3 / Supabase Storage / Cloudflare R2).
+
 ## API overview
 
 | Method | Endpoint | Description |
@@ -98,7 +106,7 @@ Errors are JSON (`{ message }` + HTTP status): 400 validation, 401 unauthenticat
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `JWT_SECRET` | Token signing secret (≥ 16 chars enforced) |
-| `JWT_EXPIRES_IN` | Token lifetime (default `12h`) |
+| `JWT_EXPIRES_IN` | Token lifetime (default `7d`) |
 | `PORT` | API port (default 5000) |
 | `CLIENT_URL` | Frontend origin |
 | `MAX_FILE_SIZE` | Upload byte limit (default 5 MB) |
