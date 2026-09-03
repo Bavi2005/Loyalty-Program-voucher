@@ -178,19 +178,22 @@ exports.uploadReceipt = async (req, res, next) => {
       return res.status(409).json({ message: 'Receipt with this Order ID already exists' });
     }
 
-    const receipt = await prisma.receipt.create({
-      data: {
-        userId,
-        orderId,
-        purchaseDate: new Date(purchaseDate),
-        amount: parseFloat(amount),
-        imageUrl: req.file.path,
-        status: 'PENDING'
-      },
-      include: {
-        voucher: true
-      }
-    });
+const receipt = await prisma.receipt.create({
+  data: {
+    userId,
+    orderId,
+    purchaseDate: new Date(purchaseDate),
+    amount: parseFloat(amount),
+
+    // Store the public path, not the Docker filesystem path.
+    imageUrl: `/uploads/${req.file.filename}`,
+
+    status: 'PENDING',
+  },
+  include: {
+    voucher: true,
+  },
+});
 
     res.status(201).json(receipt);
   } catch (error) {
