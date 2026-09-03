@@ -1,5 +1,3 @@
-// backend/src/server.js
-
 require('dotenv').config();
 const config = require('./config'); // validates env on load; exits fast if misconfigured
 const logger = require('./logging/logger');
@@ -8,6 +6,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = config.PORT;
@@ -36,7 +35,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -61,10 +59,29 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({ message: 'Loyalty Program API is running!' });
-});
+// Serve the built React app in production (single-process deploy).
+// In dev the frontend is served by Vite / proxy.js, so this is a no-op when
+// the build output is absent.
+const FRONTEND_DIST = path.join(__dirname, '..', '..', 'frontend', 'dist');
+if (fs.existsSync(FRONTEND_DIST)) {
+  app.use(express.static(FRONTEND_DIST));
+  app.use((req, res, next) => {
+    if (
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/uploads') ||
+      req.path.startsWith('/health') ||
+      req.path.startsWith('/ready')
+    ) {
+      return next();
+    }
+    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+  });
+} else {
+  // API-only root (e.g. tests / backend-only deploy)
+  app.get('/', (req, res) => {
+    res.json({ message: 'Loyalty Program API is running!' });
+  });
+}
 
 // 404 handler
 app.use((req, res) => {
