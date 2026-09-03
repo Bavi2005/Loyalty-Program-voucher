@@ -177,7 +177,66 @@ describe('Receipt upload & business rules', () => {
       .set('Authorization', `Bearer ${b.body.token}`);
     expect(mine.body.length).toBe(0);
   });
+
+  it('supports phone-only registration and login', async () => {
+    const phone =
+      `+6012${Math.floor(
+        1000000 +
+        Math.random() * 9000000
+      )}`;
+
+    const registration =
+      await request(app)
+        .post(
+          '/api/auth/register'
+        )
+        .send({
+          name:
+            'Phone User',
+
+          phone,
+
+          password:
+            'password123',
+        });
+
+    expect(
+      registration.status
+    ).toBe(201);
+
+    expect(
+      registration.body.user
+        .email
+    ).toBeNull();
+
+    expect(
+      registration.body.user
+        .phone
+    ).toBe(phone);
+
+    const login =
+      await request(app)
+        .post(
+          '/api/auth/login'
+        )
+        .send({
+          email:
+            phone,
+
+          password:
+            'password123',
+        });
+
+    expect(
+      login.status
+    ).toBe(200);
+
+    expect(
+      login.body.token
+    ).toBeTruthy();
+  });
 });
+
 
 describe('Approval → exactly one voucher (idempotency + concurrency)', () => {
   it('creates exactly one voucher, even when approved twice concurrently', async () => {

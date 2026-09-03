@@ -1,5 +1,3 @@
-// Prisma schema for Loyalty Program
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -21,16 +19,17 @@ enum ReceiptStatus {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  phone        String?       @unique
+  id           String    @id @default(cuid())
+  email        String?   @unique
+  phone        String?   @unique
   passwordHash String
   name         String?
-  role         Role          @default(USER)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  receipts     Receipt[]
-  vouchers     Voucher[]
+  role         Role      @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  receipts Receipt[]
+  vouchers Voucher[]
 
   @@index([email])
   @@index([phone])
@@ -47,7 +46,8 @@ model Receipt {
   status       ReceiptStatus @default(PENDING)
   submittedAt  DateTime      @default(now())
   reviewedAt   DateTime?
-  voucher      Voucher?
+
+  voucher Voucher?
 
   @@index([userId])
   @@index([status])
@@ -55,12 +55,14 @@ model Receipt {
 }
 
 model Voucher {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  receiptId  String    @unique
-  receipt    Receipt   @relation(fields: [receiptId], references: [id], onDelete: Cascade)
-  code       String    @unique    @default(cuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  receiptId String  @unique
+  receipt   Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  code       String    @unique @default(cuid())
   issuedAt   DateTime  @default(now())
   expiresAt  DateTime?
   redeemedAt DateTime?

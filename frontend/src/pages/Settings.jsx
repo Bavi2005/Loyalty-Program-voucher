@@ -1,6 +1,6 @@
-import { useState } from 'react';
-
-import { useAuth } from '../contexts/AuthContext';
+import {
+  useState,
+} from 'react';
 
 import {
   useForm,
@@ -11,6 +11,10 @@ import { z } from 'zod';
 import {
   zodResolver,
 } from '@hookform/resolvers/zod';
+
+import {
+  useAuth,
+} from '../contexts/AuthContext';
 
 import { api } from '../api';
 
@@ -25,19 +29,30 @@ const SettingsSchema = z
   .object({
     name: z
       .string()
+      .trim()
       .min(
         2,
         'Name must be at least 2 characters'
       ),
 
-    email: z
-      .string()
-      .email(
-        'Invalid email address'
-      ),
+    email: z.union([
+      z.literal(''),
+      z
+        .string()
+        .trim()
+        .email(
+          'Invalid email address'
+        ),
+    ]),
 
-    phone:
-      z.string().optional(),
+    phone: z
+      .string()
+      .refine(
+        (value) =>
+          !value.trim() ||
+          value.trim().length >= 6,
+        'Enter a valid phone number'
+      ),
 
     currentPassword:
       z.string().optional(),
@@ -49,11 +64,39 @@ const SettingsSchema = z
         'Password must be at least 6 characters'
       )
       .optional()
-      .or(z.literal('')),
+      .or(
+        z.literal('')
+      ),
 
     confirmNewPassword:
       z.string().optional(),
   })
+  .refine(
+    (data) =>
+      Boolean(
+        data.email.trim() ||
+        data.phone.trim()
+      ),
+    {
+      message:
+        'Keep at least one login method: email or phone',
+      path: ['email'],
+    }
+  )
+  .refine(
+    (data) =>
+      !data.newPassword ||
+      Boolean(
+        data.currentPassword
+      ),
+    {
+      message:
+        'Current password is required',
+      path: [
+        'currentPassword',
+      ],
+    }
+  )
   .refine(
     (data) =>
       !data.newPassword ||
@@ -62,7 +105,6 @@ const SettingsSchema = z
     {
       message:
         "Passwords don't match",
-
       path: [
         'confirmNewPassword',
       ],
@@ -109,6 +151,10 @@ export default function Settings() {
 
       phone:
         user?.phone || '',
+
+      currentPassword: '',
+      newPassword: '',
+      confirmNewPassword: '',
     },
   });
 
@@ -119,14 +165,22 @@ export default function Settings() {
       try {
         const updateData = {
           name:
-            data.name,
-
-          email:
-            data.email,
-
-          phone:
-            data.phone,
+            data.name.trim(),
         };
+
+        if (
+          data.email.trim()
+        ) {
+          updateData.email =
+            data.email.trim();
+        }
+
+        if (
+          data.phone.trim()
+        ) {
+          updateData.phone =
+            data.phone.trim();
+        }
 
         if (
           data.currentPassword &&
@@ -145,7 +199,6 @@ export default function Settings() {
             updateData
           );
 
-        // Keep AuthContext in sync without requiring refresh.
         updateUser(
           response.data
         );
@@ -200,8 +253,9 @@ export default function Settings() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-            Keep your account
-            details up to date.
+            Keep at least one
+            login method: email
+            or phone number.
           </p>
 
           <div className="mt-8 space-y-6">

@@ -25,10 +25,20 @@ const generateToken = (user) => {
   );
 };
 
-const normalizeEmail = (email) =>
-  email
-    .trim()
-    .toLowerCase();
+const normalizeEmail = (email) => {
+  if (
+    typeof email !== 'string'
+  ) {
+    return null;
+  }
+
+  const clean =
+    email
+      .trim()
+      .toLowerCase();
+
+  return clean || null;
+};
 
 const normalizePhone = (phone) => {
   if (
@@ -59,17 +69,31 @@ exports.register =
       const normalizedPhone =
         normalizePhone(phone);
 
+      if (
+        !normalizedEmail &&
+        !normalizedPhone
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              'Email or phone number is required',
+          });
+      }
+
       const normalizedName =
         typeof name === 'string'
           ? name.trim() || null
           : null;
 
-      const identityChecks = [
-        {
+      const identityChecks = [];
+
+      if (normalizedEmail) {
+        identityChecks.push({
           email:
             normalizedEmail,
-        },
-      ];
+        });
+      }
 
       if (normalizedPhone) {
         identityChecks.push({
@@ -90,8 +114,9 @@ exports.register =
 
       if (existingUser) {
         if (
+          normalizedEmail &&
           existingUser.email ===
-          normalizedEmail
+            normalizedEmail
         ) {
           return res
             .status(409)
@@ -151,10 +176,12 @@ exports.register =
       const token =
         generateToken(user);
 
-      res.status(201).json({
-        token,
-        user,
-      });
+      return res
+        .status(201)
+        .json({
+          token,
+          user,
+        });
     } catch (error) {
       next(error);
     }
@@ -164,19 +191,28 @@ exports.login =
   async (req, res, next) => {
     try {
       const {
-        email,
+        email: identifier,
         password,
       } = req.body;
 
-      const normalizedEmail =
-        normalizeEmail(email);
+      const cleanIdentifier =
+        identifier.trim();
 
       const user =
-        await prisma.user.findUnique(
+        await prisma.user.findFirst(
           {
             where: {
-              email:
-                normalizedEmail,
+              OR: [
+                {
+                  email:
+                    cleanIdentifier
+                      .toLowerCase(),
+                },
+                {
+                  phone:
+                    cleanIdentifier,
+                },
+              ],
             },
           }
         );
@@ -224,7 +260,7 @@ exports.login =
         ...userWithoutPassword
       } = user;
 
-      res.json({
+      return res.json({
         token,
         user:
           userWithoutPassword,
@@ -241,7 +277,8 @@ exports.me =
         await prisma.user.findUnique(
           {
             where: {
-              id: req.user.id,
+              id:
+                req.user.id,
             },
 
             select: {
@@ -264,7 +301,7 @@ exports.me =
           });
       }
 
-      res.json(user);
+      return res.json(user);
     } catch (error) {
       next(error);
     }
@@ -326,7 +363,7 @@ exports.adminLogin =
         ...adminWithoutPassword
       } = admin;
 
-      res.json({
+      return res.json({
         token,
         admin:
           adminWithoutPassword,
@@ -368,7 +405,7 @@ exports.adminMe =
           });
       }
 
-      res.json(admin);
+      return res.json(admin);
     } catch (error) {
       next(error);
     }
