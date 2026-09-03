@@ -31,8 +31,19 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Never cache JSON responses. Express adds a weak ETag and returns 304 on
+// revalidation, which made GET /api/admin/receipts arrive with an empty body
+// and left the admin list blank.
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
+// Serve uploaded files (also uncached, so receipt views don't go stale)
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 // Health check
 app.get('/health', (req, res) => {
