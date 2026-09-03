@@ -2,56 +2,123 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Always resolve uploads relative to the backend folder.
-// This avoids depending on where Node was started from.
-const UPLOAD_DIR = process.env.UPLOAD_DIR
-  ? path.resolve(process.env.UPLOAD_DIR)
-  : path.join(__dirname, '../../uploads');
+const BACKEND_ROOT =
+  path.resolve(
+    __dirname,
+    '../..'
+  );
+
+const configuredUploadDir =
+  process.env.UPLOAD_DIR?.trim() ||
+  'uploads';
+
+// Relative UPLOAD_DIR values are always
+// relative to backend/, never process.cwd().
+const UPLOAD_DIR =
+  path.isAbsolute(
+    configuredUploadDir
+  )
+    ? configuredUploadDir
+    : path.resolve(
+        BACKEND_ROOT,
+        configuredUploadDir
+      );
 
 const MAX_FILE_SIZE =
-  parseInt(process.env.MAX_FILE_SIZE, 10) || 5 * 1024 * 1024;
+  Number.parseInt(
+    process.env.MAX_FILE_SIZE,
+    10
+  ) ||
+  5 * 1024 * 1024;
 
-// Create the upload directory if needed.
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-
-  filename: (req, file, cb) => {
-    const uniqueSuffix =
-      Date.now() + '-' + Math.round(Math.random() * 1e9);
-
-    const ext = path.extname(file.originalname);
-
-    cb(null, `receipt-${uniqueSuffix}${ext}`);
-  },
-});
-
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    'image/jpeg',
-    'image/png',
-    'application/pdf',
-  ];
-
-  if (allowedTypes.includes(file.mimetype)) {
-    return cb(null, true);
-  }
-
-  cb(new Error('Invalid file type'), false);
+const MIME_EXTENSIONS = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'application/pdf': '.pdf',
 };
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: MAX_FILE_SIZE,
-  },
-});
+fs.mkdirSync(
+  UPLOAD_DIR,
+  {
+    recursive: true,
+  }
+);
+
+const storage =
+  multer.diskStorage({
+    destination: (
+      req,
+      file,
+      callback
+    ) => {
+      callback(
+        null,
+        UPLOAD_DIR
+      );
+    },
+
+    filename: (
+      req,
+      file,
+      callback
+    ) => {
+      const uniqueSuffix =
+        `${Date.now()}-${Math.round(
+          Math.random() *
+            1e9
+        )}`;
+
+      // Extension comes from the MIME type,
+      // not from an arbitrary user filename.
+      const extension =
+        MIME_EXTENSIONS[
+          file.mimetype
+        ] || '';
+
+      callback(
+        null,
+        `receipt-${uniqueSuffix}${extension}`
+      );
+    },
+  });
+
+const fileFilter = (
+  req,
+  file,
+  callback
+) => {
+  if (
+    MIME_EXTENSIONS[
+      file.mimetype
+    ]
+  ) {
+    return callback(
+      null,
+      true
+    );
+  }
+
+  callback(
+    new Error(
+      'Invalid file type'
+    ),
+    false
+  );
+};
+
+const upload =
+  multer({
+    storage,
+
+    fileFilter,
+
+    limits: {
+      fileSize:
+        MAX_FILE_SIZE,
+
+      files: 1,
+    },
+  });
 
 module.exports = {
   upload,

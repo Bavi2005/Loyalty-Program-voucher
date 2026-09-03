@@ -1,32 +1,47 @@
-// Centralized API client. The base URL stays empty for the single-port deploy
-// (proxy.js serves the SPA and proxies /api and /uploads to the backend),
-// and can be overridden at build time via VITE_API_URL / VITE_UPLOADS_URL.
-
 import axios from 'axios';
 
-const API_ORIGIN = import.meta.env.VITE_API_URL || '';
+const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
-export const api = axios.create({ baseURL: API_ORIGIN });
+export const api = axios.create({
+  baseURL: API_ORIGIN,
+});
 
-// Attach the matching JWT on every request so authorization survives a
-// browser refresh (where a fresh axios instance has no in-memory header yet).
+// Pick the correct token for every request.
+// Admin APIs use adminToken; normal APIs use token.
 api.interceptors.request.use((config) => {
   const url = config.url || '';
   const isAdminPath = url.startsWith('/api/admin');
-  const token = localStorage.getItem(isAdminPath ? 'adminToken' : 'token');
+
+  const token = localStorage.getItem(
+    isAdminPath ? 'adminToken' : 'token'
+  );
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else if (config.headers) {
+    delete config.headers.Authorization;
   }
 
   return config;
 });
 
-export const UPLOADS_BASE =
-  import.meta.env.VITE_UPLOADS_URL || `${API_ORIGIN}/uploads`;
+export const UPLOADS_BASE = (
+  import.meta.env.VITE_UPLOADS_URL ||
+  `${API_ORIGIN}/uploads`
+).replace(/\/+$/, '');
 
 export function uploadUrl(imageUrl) {
   if (!imageUrl) return null;
-  const filename = String(imageUrl).split('/').pop();
+
+  // Future-proof this if object storage is added later.
+  if (/^https?:\/\//i.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  const cleanPath = String(imageUrl).split('?')[0];
+  const filename = cleanPath.split('/').pop();
+
+  if (!filename) return null;
+
   return `${UPLOADS_BASE}/${filename}`;
 }

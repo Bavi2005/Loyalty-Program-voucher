@@ -1,89 +1,145 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { api as axios } from '../api';
-import { useNavigate } from 'react-router-dom';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from 'react';
 
-const AuthContext = createContext();
+import { api } from '../api';
+
+const AuthContext = createContext(null);
 
 const API_URL = '/api';
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
 
-    const checkAuth = async () => {
+    async function restoreSession() {
       const token = localStorage.getItem('token');
+
       if (!token) {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setUser(null);
+          setLoading(false);
+        }
+
         return;
       }
-      setLoading(true);
-      try {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        const response = await axios.get(`${API_URL}/auth/me`);
-        const data = response.data;
-        if (data.role === 'ADMIN') {
-          // A user-token must never represent an admin. Clear the stale
-          // token so the user is prompted to sign in as a member again.
-          localStorage.removeItem('token');
-          delete axios.defaults.headers.common['Authorization'];
-        } else {
-          setUser(data);
-        }
-      } catch (error) {
-        localStorage.removeItem('token');
-        delete axios.defaults.headers.common['Authorization'];
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
 
-    checkAuth();
-    return () => { cancelled = true; };
+      try {
+        const response = await api.get(
+          `${API_URL}/auth/me`
+        );
+
+        const restoredUser = response.data;
+
+        // Normal user sessions should not restore
+        // an administrator account.
+        if (restoredUser.role === 'ADMIN') {
+          localStorage.removeItem('token');
+
+          if (!cancelled) {
+            setUser(null);
+          }
+
+          return;
+        }
+
+        if (!cancelled) {
+          setUser(restoredUser);
+        }
+      } catch {
+        localStorage.removeItem('token');
+
+        if (!cancelled) {
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const login = async (credentials) => {
-    try {
-      const response = await axios.post(`${API_URL}/auth/login`, credentials);
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
-      navigate('/dashboard');
-    } catch (error) {
-      throw error;
-    }
-  };
+  const login = useCallback(
+    async (credentials) => {
+      const response = await api.post(
+        `${API_URL}/auth/login`,
+        credentials
+      );
 
-  const register = async (userData) => {
-    try {
-      const response = await axios.post(`${API_URL}/auth/register`, userData);
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
-      navigate('/dashboard');
-    } catch (error) {
-      throw error;
-    }
-  };
+      const {
+        token,
+        user: loggedInUser,
+      } = response.data;
 
-  const logout = () => {
+      localStorage.setItem(
+        'token',
+        token
+      );
+
+      setUser(loggedInUser);
+
+      return loggedInUser;
+    },
+    []
+  );
+
+  const register = useCallback(
+    async (userData) => {
+      const response = await api.post(
+        `${API_URL}/auth/register`,
+        userData
+      );
+
+      const {
+        token,
+        user: createdUser,
+      } = response.data;
+
+      localStorage.setItem(
+        'token',
+        token
+      );
+
+      setUser(createdUser);
+
+      return createdUser;
+    },
+    []
+  );
+
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
-    navigate('/login');
-  };
+  }, []);
+
+  const updateUser = useCallback(
+    (updatedUser) => {
+      setUser(updatedUser);
+    },
+    []
+  );
 
   const value = {
     user,
+    loading,
     login,
     register,
     logout,
-    loading
+    updateUser,
   };
 
   return (
@@ -91,12 +147,17 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
+export function useAuth() {
+  const context =
+    useContext(AuthContext);
+
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error(
+      'useAuth must be used within an AuthProvider'
+    );
   }
+
   return context;
-};
+}

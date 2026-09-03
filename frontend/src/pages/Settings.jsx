@@ -1,77 +1,207 @@
 import { useState } from 'react';
+
 import { useAuth } from '../contexts/AuthContext';
-import { useForm } from 'react-hook-form';
+
+import {
+  useForm,
+} from 'react-hook-form';
+
 import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { api as axios } from '../api';
-import { useToast, PageHeader, Field, btnSmPrimary } from '../components/ui';
+
+import {
+  zodResolver,
+} from '@hookform/resolvers/zod';
+
+import { api } from '../api';
+
+import {
+  useToast,
+  PageHeader,
+  Field,
+  btnSmPrimary,
+} from '../components/ui';
 
 const SettingsSchema = z
   .object({
-    name: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.string().email('Invalid email address'),
-    phone: z.string().optional(),
-    currentPassword: z.string().optional(),
-    newPassword: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
-    confirmNewPassword: z.string().optional(),
+    name: z
+      .string()
+      .min(
+        2,
+        'Name must be at least 2 characters'
+      ),
+
+    email: z
+      .string()
+      .email(
+        'Invalid email address'
+      ),
+
+    phone:
+      z.string().optional(),
+
+    currentPassword:
+      z.string().optional(),
+
+    newPassword: z
+      .string()
+      .min(
+        6,
+        'Password must be at least 6 characters'
+      )
+      .optional()
+      .or(z.literal('')),
+
+    confirmNewPassword:
+      z.string().optional(),
   })
-  .refine((d) => !d.newPassword || d.newPassword === d.confirmNewPassword, {
-    message: "Passwords don't match",
-    path: ['confirmNewPassword'],
-  });
+  .refine(
+    (data) =>
+      !data.newPassword ||
+      data.newPassword ===
+        data.confirmNewPassword,
+    {
+      message:
+        "Passwords don't match",
+
+      path: [
+        'confirmNewPassword',
+      ],
+    }
+  );
 
 export default function Settings() {
-  const { user } = useAuth();
-  const { success, error: toastError } = useToast();
-  const [loading, setLoading] = useState(false);
+  const {
+    user,
+    updateUser,
+  } = useAuth();
+
+  const {
+    success,
+    error: toastError,
+  } = useToast();
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: {
+      errors,
+    },
     setValue,
   } = useForm({
-    resolver: zodResolver(SettingsSchema),
+    resolver:
+      zodResolver(
+        SettingsSchema
+      ),
+
     mode: 'onChange',
+
     defaultValues: {
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
+      name:
+        user?.name || '',
+
+      email:
+        user?.email || '',
+
+      phone:
+        user?.phone || '',
     },
   });
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      const updateData = { name: data.name, email: data.email, phone: data.phone };
-      if (data.currentPassword && data.newPassword) {
-        updateData.currentPassword = data.currentPassword;
-        updateData.newPassword = data.newPassword;
+  const onSubmit =
+    async (data) => {
+      setLoading(true);
+
+      try {
+        const updateData = {
+          name:
+            data.name,
+
+          email:
+            data.email,
+
+          phone:
+            data.phone,
+        };
+
+        if (
+          data.currentPassword &&
+          data.newPassword
+        ) {
+          updateData.currentPassword =
+            data.currentPassword;
+
+          updateData.newPassword =
+            data.newPassword;
+        }
+
+        const response =
+          await api.put(
+            '/api/user/profile',
+            updateData
+          );
+
+        // Keep AuthContext in sync without requiring refresh.
+        updateUser(
+          response.data
+        );
+
+        success(
+          'Profile updated successfully!'
+        );
+
+        setValue(
+          'currentPassword',
+          ''
+        );
+
+        setValue(
+          'newPassword',
+          ''
+        );
+
+        setValue(
+          'confirmNewPassword',
+          ''
+        );
+      } catch (err) {
+        toastError(
+          err.response?.data
+            ?.message ||
+            'Failed to update profile'
+        );
+      } finally {
+        setLoading(false);
       }
-      await axios.put(`/api/user/profile`, updateData);
-      success('Profile updated successfully!');
-      setValue('currentPassword', '');
-      setValue('newPassword', '');
-      setValue('confirmNewPassword', '');
-    } catch (err) {
-      toastError(err.response?.data?.message || 'Failed to update profile');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   return (
     <div>
       <PageHeader
         title="Account Settings"
-        subtitle="Keep your details up to date so your rewards always reach the right person."
+        subtitle="Update your profile details or change your password."
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mx-auto max-w-2xl space-y-8">
+      <form
+        onSubmit={
+          handleSubmit(
+            onSubmit
+          )
+        }
+        className="mx-auto max-w-2xl space-y-8"
+      >
         <section className="card rounded-3xl p-8 sm:p-10">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Profile</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            Profile
+          </h2>
+
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-            This is how we greet you across the app.
+            Keep your account
+            details up to date.
           </p>
 
           <div className="mt-8 space-y-6">
@@ -80,32 +210,54 @@ export default function Settings() {
               label="Full name"
               type="text"
               placeholder="Jane Doe"
-              error={errors.name?.message}
-              {...register('name')}
+              error={
+                errors.name
+                  ?.message
+              }
+              {...register(
+                'name'
+              )}
             />
+
             <Field
               id="email"
               label="Email"
               type="email"
               placeholder="you@example.com"
-              error={errors.email?.message}
-              {...register('email')}
+              error={
+                errors.email
+                  ?.message
+              }
+              {...register(
+                'email'
+              )}
             />
+
             <Field
               id="phone"
               label="Phone number"
               type="tel"
-              placeholder="+1 555 000 0000"
-              error={errors.phone?.message}
-              {...register('phone')}
+              placeholder="+60 12 345 6789"
+              error={
+                errors.phone
+                  ?.message
+              }
+              {...register(
+                'phone'
+              )}
             />
           </div>
         </section>
 
         <section className="card rounded-3xl p-8 sm:p-10">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Change password</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            Change password
+          </h2>
+
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-            Leave these blank to keep your current password.
+            Leave these fields
+            blank to keep your
+            existing password.
           </p>
 
           <div className="mt-8 space-y-6">
@@ -114,33 +266,61 @@ export default function Settings() {
               label="Current password"
               type="password"
               placeholder="••••••••"
-              error={errors.currentPassword?.message}
-              {...register('currentPassword')}
+              error={
+                errors
+                  .currentPassword
+                  ?.message
+              }
+              {...register(
+                'currentPassword'
+              )}
             />
+
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <Field
                 id="newPassword"
                 label="New password"
                 type="password"
                 placeholder="••••••••"
-                error={errors.newPassword?.message}
-                {...register('newPassword')}
+                error={
+                  errors
+                    .newPassword
+                    ?.message
+                }
+                {...register(
+                  'newPassword'
+                )}
               />
+
               <Field
                 id="confirmNewPassword"
                 label="Confirm new password"
                 type="password"
                 placeholder="••••••••"
-                error={errors.confirmNewPassword?.message}
-                {...register('confirmNewPassword')}
+                error={
+                  errors
+                    .confirmNewPassword
+                    ?.message
+                }
+                {...register(
+                  'confirmNewPassword'
+                )}
               />
             </div>
           </div>
         </section>
 
         <div className="flex justify-end pb-4">
-          <button type="submit" disabled={loading} className={btnSmPrimary}>
-            {loading ? 'Saving…' : 'Save changes'}
+          <button
+            type="submit"
+            disabled={loading}
+            className={
+              btnSmPrimary
+            }
+          >
+            {loading
+              ? 'Saving…'
+              : 'Save changes'}
           </button>
         </div>
       </form>

@@ -39,7 +39,7 @@ export default function Register() {
     setLoading(true);
     setAuthError('');
     try {
-      const { confirmPassword, ...userData } = data;
+      const { confirmPassword: _confirmPassword, ...userData } = data;
       await authRegister(userData);
       navigate('/dashboard');
     } catch (error) {

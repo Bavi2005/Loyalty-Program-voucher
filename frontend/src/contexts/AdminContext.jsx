@@ -1,15 +1,24 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { api as axios } from '../api';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
 
-const AdminContext = createContext();
+import { api } from '../api';
+
+const AdminContext = createContext(null);
 
 const API_URL = '/api';
 
 export const AdminProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
+
   const [stats, setStats] = useState(null);
   const [receipts, setReceipts] = useState([]);
+
   const [adminLoading, setAdminLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -18,53 +27,84 @@ export const AdminProvider = ({ children }) => {
 
     const checkAdminAuth = async () => {
       const token = localStorage.getItem('adminToken');
+
       if (!token) {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setAdmin(null);
+          setLoading(false);
+        }
         return;
       }
-      setLoading(true);
+
       try {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        const response = await axios.get(`${API_URL}/admin/me`);
-        if (!cancelled) setAdmin(response.data);
-      } catch (error) {
+        const response = await api.get(
+          `${API_URL}/admin/me`
+        );
+
+        if (!cancelled) {
+          setAdmin(response.data);
+        }
+      } catch {
         localStorage.removeItem('adminToken');
-        delete axios.defaults.headers.common['Authorization'];
+
+        if (!cancelled) {
+          setAdmin(null);
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     checkAdminAuth();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = useCallback(async (credentials) => {
-    try {
-      const response = await axios.post(`${API_URL}/admin/login`, credentials);
-      const { token, admin } = response.data;
-      localStorage.setItem('adminToken', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setAdmin(admin);
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post(
+      `${API_URL}/admin/login`,
+      credentials
+    );
+
+    const {
+      token,
+      admin: loggedInAdmin,
+    } = response.data;
+
+    localStorage.setItem('adminToken', token);
+    setAdmin(loggedInAdmin);
+
+    return loggedInAdmin;
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('adminToken');
-    delete axios.defaults.headers.common['Authorization'];
+
     setAdmin(null);
+    setStats(null);
+    setReceipts([]);
+    setError(null);
   }, []);
 
   const fetchStats = useCallback(async () => {
     try {
       setAdminLoading(true);
-      const response = await axios.get(`${API_URL}/admin/dashboard`);
+
+      const response = await api.get(
+        `${API_URL}/admin/dashboard`
+      );
+
       setStats(response.data);
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch stats');
+      setError(
+        err.response?.data?.message ||
+          'Failed to fetch stats'
+      );
     } finally {
       setAdminLoading(false);
     }
@@ -73,45 +113,62 @@ export const AdminProvider = ({ children }) => {
   const fetchReceipts = useCallback(async () => {
     try {
       setAdminLoading(true);
-      const response = await axios.get(`${API_URL}/admin/receipts`);
+
+      const response = await api.get(
+        `${API_URL}/admin/receipts`
+      );
+
       setReceipts(response.data);
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch receipts');
+      setError(
+        err.response?.data?.message ||
+          'Failed to fetch receipts'
+      );
     } finally {
       setAdminLoading(false);
     }
   }, []);
 
-  const approveReceipt = useCallback(async (receiptId) => {
-    try {
-      await axios.post(`${API_URL}/admin/receipts/${receiptId}/approve`);
-      await fetchReceipts();
-      await fetchStats();
-    } catch (err) {
-      throw err;
-    }
-  }, [fetchReceipts, fetchStats]);
+  const approveReceipt = useCallback(
+    async (receiptId) => {
+      await api.post(
+        `${API_URL}/admin/receipts/${receiptId}/approve`
+      );
 
-  const rejectReceipt = useCallback(async (receiptId) => {
-    try {
-      await axios.post(`${API_URL}/admin/receipts/${receiptId}/reject`);
-      await fetchReceipts();
-      await fetchStats();
-    } catch (err) {
-      throw err;
-    }
-  }, [fetchReceipts, fetchStats]);
+      await Promise.all([
+        fetchReceipts(),
+        fetchStats(),
+      ]);
+    },
+    [fetchReceipts, fetchStats]
+  );
+
+  const rejectReceipt = useCallback(
+    async (receiptId) => {
+      await api.post(
+        `${API_URL}/admin/receipts/${receiptId}/reject`
+      );
+
+      await Promise.all([
+        fetchReceipts(),
+        fetchStats(),
+      ]);
+    },
+    [fetchReceipts, fetchStats]
+  );
 
   const value = {
     admin,
     login,
     logout,
     loading,
+
     stats,
     receipts,
     adminLoading,
     error,
+
     fetchStats,
     fetchReceipts,
     approveReceipt,
@@ -127,8 +184,12 @@ export const AdminProvider = ({ children }) => {
 
 export const useAdmin = () => {
   const context = useContext(AdminContext);
+
   if (!context) {
-    throw new Error('useAdmin must be used within an AdminProvider');
+    throw new Error(
+      'useAdmin must be used within an AdminProvider'
+    );
   }
+
   return context;
 };
