@@ -1,45 +1,53 @@
 # Deploy runbook
 
-## Option A — Local single-port (current dev flow)
+## Production — Render (Docker) + Supabase Postgres
 
-```bash
-cd backend && npm install && npx prisma migrate deploy && node seed.js && node src/server.js   # API on :5000
-cd ../frontend && npm install && npm run build
-cd .. && node proxy.js   # app on :8080
-```
+The app ships as a single container that runs `proxy.js` (public :8080) and the
+Express API (:5000, internal) together. The frontend is built into the image at
+build time; the database is the managed Postgres in Supabase.
 
-## Option B — Docker (all-in-one)
-
-```bash
-docker compose up --build   # app on :8080, db + backend inside compose
-```
-
-## Option C — Render (free cloud) + GitHub Pages (frontend)
-
-### C1. Deploy the API + DB on Render
-
-1. In Render: **New → Blueprint** → connect this repo (it reads `render.yaml` at the repo root).
-2. Render creates a free Postgres and a `loyalty-backend` web service, wiring `DATABASE_URL` and generating `JWT_SECRET` automatically.
-3. After the backend is live, run its seed once (Render → service → Shell):
+1. In Render create a **Web Service** from this repo. It auto-detects the
+   root `Dockerfile`.
+2. Set the environment variables (see `backend/.env.example`), most importantly
+   `DATABASE_URL` (Supabase connection string) and `JWT_SECRET`.
+3. Deploy. The container runs `node start.js`.
+4. Seed demo data once if needed (Render → service → Shell):
    ```bash
-   node seed.js
+   cd backend && node seed.js
    ```
 
-### C2. Point GitHub Pages at that backend
+Migrations are applied hand-in-hand with schema changes (`prisma migrate deploy`)
+and are not part of normal startup, so a restart never silently mutates the DB.
 
-In the repo: **Settings → Secrets and variables → Actions → Variables**, add:
+## Local — Docker Compose (self-contained)
 
-- `API_URL` = `https://loyalty-backend.onrender.com`
-- `UPLOADS_URL` = `https://loyalty-backend.onrender.com/uploads`
+Brings up Postgres + the app, applies migrations and seeds demo data:
 
-Then push anything to `main` (or run the **Deploy to GitHub Pages** workflow manually). The Pages site will call that backend.
+```bash
+docker compose up --build   # app on http://localhost:8080
+```
 
-### C3. URLs
+## Local — without Docker
 
-- Frontend: `https://<username>.github.io/Loyalty-Program-voucher/`
-- Backend health: `https://loyalty-backend.onrender.com/health`
+```bash
+cd backend
+cp .env.example .env        # fill DATABASE_URL + JWT_SECRET
+npm install
+npx prisma migrate deploy
+node seed.js
+node src/server.js          # API on :5000
+
+cd ../frontend
+npm install
+npm run build               # produces dist/
+
+cd ..
+node proxy.js               # app on :8080
+```
 
 ## Notes
 
-- Render free tier sleeps after idle — first request after sleep can take ~30s (cold start). This is expected on free plans.
-- CORS: the backend allows `bavi2005.github.io` and `localhost:8080` by default. Extend via the `CORS_ORIGINS` env var (comma-separated).
+- CORS origins default to `CLIENT_URL`; override with `CORS_ORIGINS`
+  (comma-separated) when the frontend and API live on different origins.
+- Receipt files are stored on disk under `backend/uploads`. For production this
+  should move to object storage (S3 / Supabase Storage / Cloudflare R2).
