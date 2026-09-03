@@ -1,5 +1,3 @@
-// backend/src/validators/schemas.js
-
 const { z } = require('zod');
 
 const registerSchema = z.object({

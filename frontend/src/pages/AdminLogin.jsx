@@ -1,5 +1,3 @@
-// frontend/src/pages/AdminLogin.jsx
-
 import { useState } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
 import { useNavigate, Link } from 'react-router-dom';

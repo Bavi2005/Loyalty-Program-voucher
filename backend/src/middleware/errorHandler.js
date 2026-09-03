@@ -1,8 +1,4 @@
-// backend/src/middleware/errorHandler.js
-
 const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err);
-
   // Zod validation errors
   if (err.name === 'ZodError') {
     return res.status(400).json({

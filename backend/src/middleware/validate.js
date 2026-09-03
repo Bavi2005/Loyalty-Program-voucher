@@ -1,5 +1,3 @@
-// backend/src/middleware/validate.js
-
 const validate = (schema) => async (req, res, next) => {
   try {
     await schema.parseAsync({

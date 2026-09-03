@@ -1,10 +1,8 @@
 // backend/tests/unit.test.js
 // Unit tests for validation schemas and pure logic (no DB required).
 
-const { z } = require('zod');
 const {
   registerSchema,
-  loginSchema,
   uploadReceiptSchema,
   updateProfileSchema,
 } = require('../src/validators/schemas');

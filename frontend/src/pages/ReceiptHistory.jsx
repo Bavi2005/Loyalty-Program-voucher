@@ -1,5 +1,3 @@
-// frontend/src/pages/ReceiptHistory.jsx
-
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Search } from 'lucide-react';

@@ -1,5 +1,3 @@
-// frontend/src/pages/Dashboard.jsx
-
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';

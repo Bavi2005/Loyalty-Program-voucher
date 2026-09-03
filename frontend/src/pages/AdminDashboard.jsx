@@ -1,5 +1,3 @@
-// frontend/src/pages/AdminDashboard.jsx
-
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';

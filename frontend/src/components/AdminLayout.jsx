@@ -1,5 +1,3 @@
-// frontend/src/components/AdminLayout.jsx
-
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { LogOut, LayoutDashboard, ReceiptText, ShieldCheck, Sun, Moon, ChevronDown } from 'lucide-react';

@@ -1,5 +1,3 @@
-// backend/src/controllers/userController.js
-
 const bcrypt = require('bcryptjs');
 const prisma = require('../utils/prisma');
 

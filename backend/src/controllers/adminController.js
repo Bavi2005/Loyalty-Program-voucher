@@ -1,5 +1,3 @@
-// backend/src/controllers/adminController.js
-
 const prisma = require('../utils/prisma');
 
 exports.getDashboard = async (req, res, next) => {

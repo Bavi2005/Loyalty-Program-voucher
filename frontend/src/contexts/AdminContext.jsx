@@ -1,5 +1,3 @@
-// frontend/src/contexts/AdminContext.jsx
-
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api as axios } from '../api';
 

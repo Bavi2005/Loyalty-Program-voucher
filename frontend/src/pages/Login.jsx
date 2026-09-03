@@ -1,5 +1,3 @@
-// frontend/src/pages/Login.jsx
-
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -39,7 +37,6 @@ export default function Login() {
       await login(data);
       navigate('/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
       setAuthError(error.response?.data?.message || 'Login failed. Check your email and password.');
     } finally {
       setLoading(false);

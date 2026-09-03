@@ -1,5 +1,3 @@
-// frontend/src/pages/Register.jsx
-
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -45,7 +43,6 @@ export default function Register() {
       await authRegister(userData);
       navigate('/dashboard');
     } catch (error) {
-      console.error('Registration error:', error);
       setAuthError(error.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);

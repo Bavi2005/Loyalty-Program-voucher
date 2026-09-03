@@ -1,5 +1,3 @@
-// backend/src/routes/userRoutes.js
-
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();

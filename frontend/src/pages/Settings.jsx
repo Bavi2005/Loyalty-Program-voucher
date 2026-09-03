@@ -1,5 +1,3 @@
-// frontend/src/pages/Settings.jsx
-
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useForm } from 'react-hook-form';

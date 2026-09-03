@@ -1,4 +1,3 @@
-// frontend/src/utils/formatters.js
 // Central locale-aware formatting. Currency is configurable via VITE_CURRENCY
 // (defaults to MYR — adjust to your market).
 
