@@ -8,6 +8,8 @@ const morgan = require('morgan');
 const path = require('path');
 const fs = require('fs');
 
+const { UPLOAD_DIR } = require('./utils/upload');
+
 const app = express();
 const PORT = config.PORT;
 app.set('trust proxy', 1); // correct client IPs behind proxy.js / reverse proxies
@@ -40,10 +42,14 @@ app.use('/api', (req, res, next) => {
 });
 
 // Serve uploaded files (also uncached, so receipt views don't go stale)
-app.use('/uploads', (req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store');
-  next();
-}, express.static(path.join(__dirname, '../uploads')));
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  },
+  express.static(UPLOAD_DIR)
+);
 
 // Health check
 app.get('/health', (req, res) => {
